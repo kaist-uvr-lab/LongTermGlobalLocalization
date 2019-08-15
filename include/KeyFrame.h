@@ -29,9 +29,6 @@
 #include "Frame.h"
 #include "KeyFrameDatabase.h"
 
-//Added for including lines. 
-#include "Line3d.h"
-
 #include <mutex>
 #ifdef FUNC_MAP_SAVE_LOAD
 #include "BoostArchiver.h"
@@ -43,6 +40,7 @@ class Map;
 class MapPoint;
 class Frame;
 class KeyFrameDatabase;
+class Line3d;
 
 class KeyFrame
 {
@@ -247,18 +245,10 @@ protected:
     std::mutex mMutexConnections;
     std::mutex mMutexFeatures;
 
-
 	//Added for lines. 
 public:
-	void SetExtracted2DLines(cv::Mat &lines) {
-		if (mLines2D.empty()) {
-			lines.copyTo(mvpLines);
-			mvpLines = vector<Line3d*>(mLines2D.rows, static_cast<Line3d*>(NULL));
-			//mvbOutlier = vector<bool>(N, false);
-		} 
-	};
-
-	void Set3DLines() {  };
+	void SetExtracted2DLines(cv::Mat &lines);
+	void Set3DLines();
 	void AddLine3D(Line3d *pL3d, const size_t &idx);
 	std::vector<Line3d*> Get3DLines() { return mvpLines; };
 
@@ -267,7 +257,7 @@ private:
 	cv::Mat mLines2D;
 	int nLines2D;
 
-	// Registered 3D Lines.
+	//Registered 3D Lines.
 	std::vector<Line3d*> mvpLines;
 
 };

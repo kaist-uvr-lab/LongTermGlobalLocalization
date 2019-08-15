@@ -21,6 +21,8 @@
 #include "KeyFrame.h"
 #include "Converter.h"
 #include "ORBmatcher.h"
+//Added for including lines. 
+#include "Line3d.h"
 #include<mutex>
 
 namespace ORB_SLAM2
@@ -41,7 +43,7 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB):
     mvInvLevelSigma2(F.mvInvLevelSigma2), mnMinX(F.mnMinX), mnMinY(F.mnMinY), mnMaxX(F.mnMaxX),
     mnMaxY(F.mnMaxY), mK(F.mK), mvpMapPoints(F.mvpMapPoints), mpKeyFrameDB(pKFDB),
     mpORBvocabulary(F.mpORBvocabulary), mbFirstConnection(true), mpParent(NULL), mbNotErase(false),
-    mbToBeErased(false), mbBad(false), mHalfBaseline(F.mb/2), mpMap(pMap), nLines2D(0)
+    mbToBeErased(false), mbBad(false), mHalfBaseline(F.mb/2), mpMap(pMap)
 {
     mnId=nNextId++;
 
@@ -755,4 +757,14 @@ void KeyFrame::AddLine3D(Line3d *pL3d, const size_t &idx)
 	mvpLines[idx] = pL3d;
 }
 
+void KeyFrame::SetExtracted2DLines(cv::Mat &lines) {
+	if (mLines2D.empty()) {
+		lines.copyTo(mLines2D);
+		mvpLines = std::vector<Line3d*>(mLines2D.rows, static_cast<Line3d*>(NULL));
+		
+		//mvbOutlier = vector<bool>(N, false);
+	}
+}
+
 } //namespace ORB_SLAM
+ 

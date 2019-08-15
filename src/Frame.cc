@@ -92,7 +92,7 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
     mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));    
     mvbOutlier = vector<bool>(N,false);
 
-	
+
     // This is done only for the first Frame (or after a change in the calibration)
     if(mbInitialComputations)
     {
