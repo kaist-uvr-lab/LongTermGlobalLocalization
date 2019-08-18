@@ -19,6 +19,7 @@
 */
 
 #include "Map.h"
+#include "Line3d.h"
 
 #include<mutex>
 
@@ -28,6 +29,20 @@ namespace ORB_SLAM2
 Map::Map():mnMaxKFid(0),mnBigChangeIdx(0)
 {
 }
+
+// Added for line registration. 
+void Map::AddLine3d(Line3d* pLine3d) {
+	mspLine3ds.insert(pLine3d);
+}
+
+void Map::EraseLine3d(Line3d* pLine3d) {
+	mspLine3ds.erase(pLine3d);
+}
+
+std::vector<Line3d*> Map::GetLine3ds() {
+	return vector<Line3d*>(mspLine3ds.begin(), mspLine3ds.end());
+}
+
 
 void Map::AddKeyFrame(KeyFrame *pKF)
 {

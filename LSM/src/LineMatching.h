@@ -183,7 +183,7 @@ private:
 	bool isTwoLineOverlap(Point2f pt1, Point2f pt2, Point2f pt3, Point2f pt4, float &dist, float radius=5);
 	bool isConsistentWithHMat(Point2f pt1, Point2f pt2, Mat hmat, float hDistThr);	
 	void calcLocalHomography_2lineFMat(strFanSection strfan1, strFanSection strfan2, Mat fmat, Mat &hmat);
-	void lineMatches2Mat(Mat &mline);
+	void lineMatches2Mat(Mat &mline, Mat &mlineIndex);
 	bool isLineIntersectRectangle(float linePointX1, float linePointY1, float linePointX2, float linePointY2, float rectangleLeftTopX, 
 		float rectangleLeftTopY, float rectangleRightBottomX, float rectangleRightBottomY);
 	float distPairPt2HMat(Point2f pt1, Point2f pt2, Mat hmat);
@@ -215,7 +215,7 @@ private:
 
 public:
 	CLineMatching();
-	CLineMatching(Mat rimg,  Mat rline, Mat rnode, Mat qimg,  Mat qline, Mat qnode, Mat colorImg1, Mat colorImg2, Mat &mlines,
+	CLineMatching(Mat rimg,  Mat rline, Mat rnode, Mat qimg,  Mat qline, Mat qnode, Mat colorImg1, Mat colorImg2, Mat &mlines, Mat &mlineIndex,
 		bool isVerb, bool isBuildingImagePyramids, float nAvgDesDist, bool isProvidedJunctions, bool isTwoLineHomog,
 		int nOctave, int nOctaveLayer, float desDistThr, float fmatThr, float fmatDesThrProg, float hmatThr, int nNeighborPts, int nEnterGroup,
 		float rotAngleThr, float sameSideRatio, float regionHeight, float junctionDistThr, float intensityProfileWidth, float radiusPointMatchUnique, float difAngThr,

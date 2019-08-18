@@ -24,7 +24,6 @@
 #include "MapPoint.h"
 #include "KeyFrame.h"
 #include <set>
-
 #include <mutex>
 
 #ifdef FUNC_MAP_SAVE_LOAD
@@ -36,11 +35,17 @@ namespace ORB_SLAM2
 
 class MapPoint;
 class KeyFrame;
+class Line3d;
 
 class Map
 {
 public:
     Map();
+
+	//Added for line registration
+	void AddLine3d(Line3d* pLine3d);
+	void EraseLine3d(Line3d* pLine3d);
+	std::vector<Line3d*> GetLine3ds();
 
     void AddKeyFrame(KeyFrame* pKF);
     void AddMapPoint(MapPoint* pMP);
@@ -78,6 +83,9 @@ private:
 protected:
     std::set<MapPoint*> mspMapPoints;
     std::set<KeyFrame*> mspKeyFrames;
+
+	// Added for line registration. 
+	std::set<Line3d*> mspLine3ds;
 
     std::vector<MapPoint*> mvpReferenceMapPoints;
 

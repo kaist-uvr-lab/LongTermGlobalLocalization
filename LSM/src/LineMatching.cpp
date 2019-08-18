@@ -2,7 +2,7 @@
 #include "MatOperation.h"
 #include "IO.h"
 
-CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat line2, Mat tnode2, Mat tcolorImg1, Mat tcolorImg2, Mat &mlines, bool isVerbose,
+CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat line2, Mat tnode2, Mat tcolorImg1, Mat tcolorImg2, Mat &mlines, Mat &mlineIndex, bool isVerbose,
 	 bool isBuildingImagePyramids, float nAvgDesDist, bool isProvidedJunctions, bool isTwoLineHomog, int nOctave, int nOctaveLayer, float desDistThrEpi, float desDistThrProg, 
 	 float fmatThr, float hmatThr, int nNeighborPts, int nEnterGroup, float rotAngleThr, float sameSideRatio, float regionHeight, float junctionDistThr,
 	 float intensityProfileWidth, float radiusPointMatchUnique, float difAngThr, float rcircle, float truncateThr, float fanThr, string outFileName)
@@ -273,7 +273,7 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 	cout<<"Final line matches:" << vstrLineMatch.size()<<endl;	
 	//cout<<"\nTotal time: "<<totTime<<" seconds";
 
-	lineMatches2Mat(mlines);
+	lineMatches2Mat(mlines, mlineIndex);
 	if (isVerbose) plotPointMatches(colorImg1.clone(), colorImg2.clone(), vstrPointMatch, "Final point matches");
 	if (isVerbose)
 	{ 
@@ -288,7 +288,7 @@ void CLineMatching::descriptorEvaluationUniquePtMatches()
 
 }
 
-void CLineMatching::lineMatches2Mat(Mat &mline)
+void CLineMatching::lineMatches2Mat(Mat &mline, Mat &mlineIndex)
 {
 	string fileName = _outFileName;
 	ofstream outFile(fileName.c_str(), ios_base::out);  //按新建或覆盖方式写入  	
@@ -303,7 +303,13 @@ void CLineMatching::lineMatches2Mat(Mat &mline)
 			strline1[ser1].pe.x, strline1[ser1].pe.y, 
 			strline2[ser2].ps.x, strline2[ser2].ps.y,
 			strline2[ser2].pe.x, strline2[ser2].pe.y);
+		
 		mline.push_back(tmat);
+
+		//Save index info
+		Mat tmatIndex = (Mat_<int>(1, 2) << ser1, ser2);
+		mlineIndex.push_back(tmatIndex);
+		
 		vser.push_back(ser1);
 		//	outFile<< ser1 << ' ' << ser2 <<endl;   //每列数据用 tab 隔开  			
 	}		

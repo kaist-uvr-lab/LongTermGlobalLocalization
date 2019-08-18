@@ -1,3 +1,5 @@
+#ifndef LINE3D_H
+#define LINE3D_H
 
 #include <System.h>
 #include <KeyFrame.h>
@@ -11,17 +13,19 @@ namespace ORB_SLAM2 {
 
 	public:
 		Line3d();
+		Line3d(cv::Mat &_plucker, cv::Mat &_endPts, Map* pMap);
 
 		void SetPluckerWorld(cv::Mat &_plucker) { _plucker.copyTo(mPlucker); };
 		void SetEndPts(pair<float, float> &_endPts) { _endPts = make_pair(_endPts.first, _endPts.second); };
 
 		cv::Mat GetPluckerWorld() { return mPlucker; };
-		pair<float, float> GetEndPts() { return mEndPts; };
+		cv::Mat GetEndPts() { return mEndPts; };
+
+		void Line3d::AddObservation(KeyFrame* pKF, size_t idx);
 
 	private:
-		// Position in plucker coordinate in world coordinate
-		cv::Mat mPlucker;
-		pair<float, float> mEndPts;
+		// Position in plucker coordinate & world coordinate
+		cv::Mat mPlucker, mEndPts;
 
 		// Keyframes observing the line and associated index in keyframe
 		std::map<KeyFrame*, size_t> mLineObservations;
@@ -29,7 +33,11 @@ namespace ORB_SLAM2 {
 		// Reference KeyFrame
 		Map* mpMap;
 
+		// number of observed Keyframes
+		int nObs;
 
 	};
 
-}
+} // namespace ORB_SLAM
+
+#endif // LINE3D_H

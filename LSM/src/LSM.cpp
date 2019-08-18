@@ -25,8 +25,15 @@ LSM::LSM() {
 LSM::~LSM() {
 }
 
-LSM::LSM(char* imgName1, char* imgName2, char* providedLines1, char* providedLines2, bool isProvideLines): mImgName1(imgName1), mImgName2(imgName2), 
-mProvidedLines1(providedLines1), mProvidedLines2(providedLines2), mIsProvideLines(isProvideLines){}
+LSM::LSM(bool isProvideLines):mIsProvideLines(isProvideLines){}
+
+void LSM::setImgLines(char* imgName1, char* imgName2, char* providedLines1, char* providedLines2) {
+	mImgName1 = imgName1;
+	mImgName2 = imgName2;
+	mProvidedLines1 = providedLines1;
+	mProvidedLines2 = providedLines2;
+}
+
 
 void LSM::detectLine(char* imfile, Mat &mLines, float minLineLength)
 {
@@ -133,7 +140,7 @@ void LSM::drawPartiallyConnectedLine(Mat Img, Mat mLines, string imgName, Mat fa
 	//waitKey(20);
 }
 
-Mat* LSM::lsm(Mat &given_lines1, Mat&given_lines2) {
+pair<Mat*, Mat*> LSM::lsm(Mat &given_lines1, Mat&given_lines2) {
 	Mat colorImg1 = imread(mImgName1, 3);
 	Mat colorImg2 = imread(mImgName2, 3);
 	Mat img1, img2;
@@ -218,7 +225,7 @@ Mat* LSM::lsm(Mat &given_lines1, Mat&given_lines2) {
 
 	//waitKey();
 
-	CLineMatching *pLineMatching = new CLineMatching(img1, lines1, nodes1, img2, lines2, nodes2, colorImg1, colorImg2, mlines,
+	CLineMatching *pLineMatching = new CLineMatching(img1, lines1, nodes1, img2, lines2, nodes2, colorImg1, colorImg2, mlines, mlineIndex,
 		isVerbose, isBuildingImagePyramids, nAvgDesDist, isProvideJunc, isTwoLineHomography,
 		nOctave, nOctaveLayer, desDistThrEpi, desDistThrProg, fmatThr, hmatThr, nNeighborPts, nEnterGroup,
 		rotAngThr, sameSideRatio, regionHeight, junctionDistThr, intensityProfileWidth, radiusPointMatchUnique, difAngThr,
@@ -232,7 +239,9 @@ Mat* LSM::lsm(Mat &given_lines1, Mat&given_lines2) {
 	delete pLineMatching;
 	pLineMatching = NULL;
 	
-	return &mlines;
+	pair<Mat*, Mat*> pLines = make_pair(&mlines, &mlineIndex);
+
+	return pLines;
 }
 
 

@@ -29,3 +29,4 @@ Examples/
 *.bin
 *.exe
 *.gz
+test_build/

@@ -18,11 +18,12 @@ class LSM {
 public:
 	LSM();
 	~LSM();
-	LSM(char* imgName1, char* imgName2, char* providedLines1, char* providedLines2, bool isProvideLines);
+	LSM(bool isProvideLines);
+	void setImgLines(char* imgName1, char* imgName2, char* providedLines1, char* providedLines2);
 	void detectLine(char* imfile, Mat &mLines, float minLineLength);
 	void drawDectectedLine(Mat Img, Mat mLines, string imgName);
 	void drawPartiallyConnectedLine(Mat Img, Mat mLines, string imgName, Mat fans);
-	Mat* lsm(Mat &given_lines1, Mat &given_lines2);
+	pair<Mat*, Mat*> lsm(Mat &given_lines1, Mat &given_lines2);
 
 public:
 	char* mImgName1;
@@ -87,5 +88,5 @@ private:
 	float fanThr = 1.0 / 4 * CV_PI;
 
 	// Final results of matched lines.
-	Mat mlines;
+	Mat mlines, mlineIndex;
 };
