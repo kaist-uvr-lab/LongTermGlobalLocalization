@@ -251,6 +251,7 @@ public:
 	void Set3DLines();
 	void AddLine3D(Line3d *pL3d, const size_t &idx);
 	std::vector<Line3d*> Get3DLines() { return mvpLines; };
+	Line3d* Get3DLine(int idx) { return mvpLines[idx]; };
 
 private:
 	// Extracted 2D lines.
