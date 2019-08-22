@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(ORB_SLAM2)
+project(LTGL)
 
 IF(NOT CMAKE_BUILD_TYPE)
   SET(CMAKE_BUILD_TYPE Release)
@@ -48,19 +48,21 @@ endif()
 
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
+find_package(Boost REQUIRED)
 
 include_directories(
 ${PROJECT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}/include
 ${EIGEN3_INCLUDE_DIR}
 ${Pangolin_INCLUDE_DIRS}
+${Boost_INCLUDE_DIR}
 ${PROJECT_SOURCE_DIR}/LSM/src
 ${PROJECT_SOURCE_DIR}/LTGL/src
 )
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
-add_library(${PROJECT_NAME} SHARED
+add_library(ORB_SLAM2 STATIC
 src/System.cc
 src/Tracking.cc
 src/LocalMapping.cc
@@ -83,7 +85,7 @@ src/Viewer.cc
 src/Line3d.cpp
 )
 
-add_library(LSM SHARED
+add_library(LSM STATIC
 LSM/src/lsd.c
 LSM/src/IO.cpp
 LSM/src/LineMatching.cpp
@@ -92,8 +94,7 @@ LSM/src/MatOperation.cpp
 LSM/src/PartiallyRecoverConnectivity.cpp
 )
 
-
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(ORB_SLAM2
 ${OpenCV_LIBS}
 ${EIGEN3_LIBS}
 ${Pangolin_LIBRARIES}
@@ -116,24 +117,26 @@ endif()
 # Build LTGL 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/LTGL)
 
-add_executable(LTGL
-LTGL/src/main.cpp)
-target_link_libraries(LTGL ${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/build/Release/LSM.lib)
+add_executable(ltgl_orb_slam2
+LTGL/src/main.cpp
+LTGL/src/LineMapping.cpp
+)
+target_link_libraries(ltgl_orb_slam2 ORB_SLAM2 ${PROJECT_SOURCE_DIR}/build/Release/LSM.lib)
 
 # Build examples
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Examples/Monocular)
 
 add_executable(mono_tum
 Examples/Monocular/mono_tum.cc)
-target_link_libraries(mono_tum ${PROJECT_NAME})
+target_link_libraries(mono_tum ORB_SLAM2)
 
 add_executable(mono_kitti
 Examples/Monocular/mono_kitti.cc)
-target_link_libraries(mono_kitti ${PROJECT_NAME})
+target_link_libraries(mono_kitti ORB_SLAM2)
 
 add_executable(mono_euroc
 Examples/Monocular/mono_euroc.cc)
-target_link_libraries(mono_euroc ${PROJECT_NAME})
+target_link_libraries(mono_euroc ORB_SLAM2)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Vocabulary)
 add_executable(bin_vocabulary Vocabulary/bin_vocabulary.cpp)
@@ -144,10 +147,10 @@ if(USE_EXAMPLE_WEBCAM)
     pkg_search_module(CURL REQUIRED libcurl)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
     add_executable(mono_uvc Examples/mono_uvc.cpp)
-    target_link_libraries(mono_uvc ${PROJECT_NAME})
+    target_link_libraries(mono_uvc ORB_SLAM2)
     add_executable(mono_android_ipcam Examples/mono_android_ipcam.cpp)
-    target_link_libraries(mono_android_ipcam ${PROJECT_NAME} ${CURL_LIBRARIES})
+    target_link_libraries(mono_android_ipcam ORB_SLAM2 ${CURL_LIBRARIES})
     add_executable(mono_android_ipcam_ar Examples/mono_android_ipcam_ar.cpp Examples/AR/ViewerAR.cc)
     target_include_directories(mono_android_ipcam_ar PUBLIC Examples/AR/)
-    target_link_libraries(mono_android_ipcam_ar ${PROJECT_NAME} ${CURL_LIBRARIES})
+    target_link_libraries(mono_android_ipcam_ar ORB_SLAM2 ${CURL_LIBRARIES})
 endif()
