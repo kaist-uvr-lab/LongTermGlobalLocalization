@@ -3,6 +3,14 @@
 ## Temporal Dataset can be downloaded here
  - [labri_landscape_overcase](https://drive.google.com/open?id=1o4i9grRQoC7nAmFOOKjGoray5fZ47H2u)
 
+## How to use. 
+  ```
+ ./LTGL/src/main (ORBvoc.bin path) (s7_640_480.yaml path) (img path) 1
+  ```
+img path includes all of 'images', 'results', 'undistort' directory. 1 means it will save/load map. 
+
+C:/jungWhie/Research/ORB_Enhanced/ORB_SLAM2_Enhanced-master/Vocabulary/Release/ORBvoc.bin D:/DATA/Dataset/Labri/labri_landscape/s7_640_480.yaml D:/DATA/Dataset/Labri/labri_landscape/overcast_0207_640_imgs 1
+
 ## Updating ...
 **Reference**: 
 
