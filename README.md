@@ -7,9 +7,7 @@
   ```
  ./LTGL/src/main (ORBvoc.bin path) (s7_640_480.yaml path) (img path) 1
   ```
-img path includes all of 'images', 'results', 'undistort' directory. 1 means it will save/load map. 
-
-C:/jungWhie/Research/ORB_Enhanced/ORB_SLAM2_Enhanced-master/Vocabulary/Release/ORBvoc.bin D:/DATA/Dataset/Labri/labri_landscape/s7_640_480.yaml D:/DATA/Dataset/Labri/labri_landscape/overcast_0207_640_imgs 1
+(img path) includes all of 'images', 'results', 'undistort' directory. 1 means it will save/load map. 
 
 ## Updating ...
 **Reference**: 
