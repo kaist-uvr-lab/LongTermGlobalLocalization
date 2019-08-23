@@ -74,6 +74,14 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     {
         mapfile = (string)mapfilen;
     }
+
+	// Map files 
+	cv::FileNode linemapfilen = fsSettings["Map.lineMapfile"];
+	if (!linemapfilen.empty())
+	{
+		linemapfile = (string)linemapfilen;
+	}
+
 #endif
 
     //Load ORB Vocabulary
@@ -314,6 +322,58 @@ cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp)
     return Tcw;
 }
 
+cv::Mat System::TrackMonocularLines(const cv::Mat &im, const cv::Mat &lines, const double &timestamp)
+{
+	if (mSensor != MONOCULAR)
+	{
+		cerr << "ERROR: you called TrackMonocular but input sensor was not set to Monocular." << endl;
+		exit(-1);
+	}
+
+	// Check mode change
+	{
+		unique_lock<mutex> lock(mMutexMode);
+		if (mbActivateLocalizationMode)
+		{
+			mpLocalMapper->RequestStop();
+
+			// Wait until Local Mapping has effectively stopped
+			while (!mpLocalMapper->isStopped())
+			{
+				std::this_thread::sleep_for(std::chrono::microseconds(1000));
+			}
+
+			mpTracker->InformOnlyTracking(true);
+			mbActivateLocalizationMode = false;
+		}
+		if (mbDeactivateLocalizationMode)
+		{
+			mpTracker->InformOnlyTracking(false);
+			mpLocalMapper->Release();
+			mbDeactivateLocalizationMode = false;
+		}
+	}
+
+	// Check reset
+	{
+		unique_lock<mutex> lock(mMutexReset);
+		if (mbReset)
+		{
+			mpTracker->Reset();
+			mbReset = false;
+		}
+	}
+
+	cv::Mat Tcw = mpTracker->GrabImageMonocularLine(im, lines, timestamp);
+
+	unique_lock<mutex> lock2(mMutexState);
+	mTrackingState = mpTracker->mState;
+	mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
+	mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
+
+	return Tcw;
+}
+
 void System::ActivateLocalizationMode()
 {
     unique_lock<mutex> lock(mMutexMode);
@@ -345,7 +405,7 @@ void System::Reset()
     mbReset = true;
 }
 
-void System::Shutdown()
+void System::Shutdown(bool is_line_included)
 {
     mpLocalMapper->RequestFinish();
     mpLoopCloser->RequestFinish();
@@ -366,8 +426,13 @@ void System::Shutdown()
     if(mpViewer)
         pangolin::BindToContext("ORB-SLAM2: Map Viewer");
 #ifdef FUNC_MAP_SAVE_LOAD
-    if (is_save_map)
-        SaveMap(mapfile);
+	if (is_save_map) {
+		if(is_line_included)
+			SaveMap(linemapfile);
+		else
+			SaveMap(mapfile);
+	}
+
 #endif
 }
 

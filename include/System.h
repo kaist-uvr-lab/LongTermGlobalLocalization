@@ -86,6 +86,12 @@ public:
     // Returns the camera pose (empty if tracking fails).
     cv::Mat TrackMonocular(const cv::Mat &im, const double &timestamp);
 
+	// Proccess the given monocular frame using lines
+	// Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
+	// Returns the camera pose (empty if tracking fails).
+	cv::Mat TrackMonocularLines(const cv::Mat &im, const cv::Mat &lines , const double &timestamp);
+
+
     // This stops local mapping thread (map building) and performs only camera tracking.
     void ActivateLocalizationMode();
     // This resumes local mapping thread and performs SLAM again.
@@ -101,7 +107,7 @@ public:
     // All threads will be requested to finish.
     // It waits until all threads have finished.
     // This function must be called before saving the trajectory.
-    void Shutdown();
+    void Shutdown(bool is_line_included);
 
     // Save camera trajectory in the TUM RGB-D dataset format.
     // Only for stereo and RGB-D. This method does not work for monocular.
@@ -127,7 +133,8 @@ public:
     std::vector<cv::KeyPoint> GetTrackedKeyPointsUn();
 
 	//Added 
-	Map* System::GetMap();
+	Map* GetMap();
+
 
 #ifdef FUNC_MAP_SAVE_LOAD
 private:
@@ -150,7 +157,7 @@ private:
     // Map structure that stores the pointers to all KeyFrames and MapPoints.
     Map* mpMap;
 #ifdef FUNC_MAP_SAVE_LOAD
-    string mapfile;
+    string mapfile, linemapfile;
     bool is_save_map;
 #endif
     // Tracker. It receives a frame and computes the associated camera pose.

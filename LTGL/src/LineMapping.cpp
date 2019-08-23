@@ -280,8 +280,6 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		Mat K = pCurrentKF->mK;
 		Mat invK = K.inv();
 
-		//if (pCurrentKF->mnFrameId != 1439)
-		//	continue;
 		// Perform triangulation only for co-visible keyframes. 
 		vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(10);
 
