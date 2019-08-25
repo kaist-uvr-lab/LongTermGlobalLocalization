@@ -5,7 +5,7 @@
 CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat line2, Mat tnode2, Mat tcolorImg1, Mat tcolorImg2, Mat &mlines, Mat &mlineIndex, bool isVerbose,
 	 bool isBuildingImagePyramids, float nAvgDesDist, bool isProvidedJunctions, bool isTwoLineHomog, int nOctave, int nOctaveLayer, float desDistThrEpi, float desDistThrProg, 
 	 float fmatThr, float hmatThr, int nNeighborPts, int nEnterGroup, float rotAngleThr, float sameSideRatio, float regionHeight, float junctionDistThr,
-	 float intensityProfileWidth, float radiusPointMatchUnique, float difAngThr, float rcircle, float truncateThr, float fanThr, string outFileName)
+	 float intensityProfileWidth, float radiusPointMatchUnique, float difAngThr, float rcircle, float truncateThr, float fanThr, string outFileName, bool isPrecomputedF, Mat &_Fmat)
 {	
 	_outFileName = outFileName;
 	_isTwoLineHomog = isTwoLineHomog;
@@ -157,12 +157,20 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 	}
 
 	bool *pbIsKept = new bool[nptsMatches];	
-	findRobustFundamentalMat(vpts1, vpts2, FMat, pbIsKept);	
 
+	// Added.
+	// If fundamental matrix is given, we can take advantage of it. 
+	if (_isPreComputedF) {
+		FMat = _Fmat;
+		findFmatInliers(vpts1, vpts2, FMat, pbIsKept);
+	}
+	else {
+		cout << "If isPreComputedF is true, it should not be here.. Why you are here.." << endl;
+		findRobustFundamentalMat(vpts1, vpts2, FMat, pbIsKept);
+	}
 	CIO io;
-	io.writeData("fundamentalMatrix.txt", FMat);
+	//io.writeData("fundamentalMatrix.txt", FMat);
 
-	if (isVerbose) drawEpipolarline(colorImg1.clone(), colorImg2.clone(), vpts1, vpts2, FMat);	
 	for (int i = 0; i < nptsMatches; i++)
 	{	
 		if (pbIsKept[i] == 0)									
@@ -172,6 +180,16 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 			num++;
 		}
 	}	
+
+	// If it generates not enough matches, pass it. 
+	if (vstrPointMatch.size() < 10) {
+		cout << "Not enough matches are generated. Pass.. " << endl;
+		return;
+	}
+
+	//if (isVerbose) drawEpipolarline(colorImg1.clone(), colorImg2.clone(), vpts1, vpts2, FMat);	
+
+
 	if (isVerbose) plotPointMatches(colorImg1.clone(), colorImg2.clone(), vstrPointMatch,"LJL matches filtered by epipolar line contraint");		
 //	cout<<"LJL matches after estimating fundamental matirx: " << vstrPointMatch.size()<<endl;
 	fanMatch2LineMatch(vstrFanMatch, vstrLineMatch);
@@ -4229,7 +4247,7 @@ void CLineMatching::plotPointMatches(Mat colorImg1, Mat colorImg2, vector<strPoi
 		circle(combinedImg, end, 4, CV_RGB(0, 255, 0), -1);
 		putText(combinedImg, str, end, FONT_HERSHEY_SIMPLEX, 0.5, CV_RGB(255,0,0), 1);		
 	}
-	//imshow(imgName, combinedImg);
+	imshow(imgName, combinedImg);
 	//waitKey(20);
 }
 
@@ -4316,13 +4334,28 @@ void CLineMatching::getResiduauls(Mat  pts1, Mat pts2, Mat FMat, Mat_<float> &re
 	residuals = dist1 + dist2;	
 }
 
+void CLineMatching::findFmatInliers(vector<Point2f> &PointSet1, vector<Point2f> &PointSet2, Mat &FMat, bool *pbIsKept) {
+	Mat tmpFMat = FMat.clone();
+	tmpFMat.convertTo(tmpFMat, CV_64F);
+	getPointsonPolarline(PointSet1, PointSet2, tmpFMat, _fmatThr, pbIsKept);
+	//FMat = findFundamentalMat(PointSet1, PointSet2, CV_LMEDS, _fmatThr, 0.99, status);
+	//FMat.convertTo(FMat, CV_32F);
+}
+
+
 void CLineMatching::findRobustFundamentalMat(vector<Point2f> &PointSet1,vector<Point2f> &PointSet2, Mat &FMat, bool *pbIsKept)
 {
+	cout << "Here" << endl;
 	unsigned i;
 	vector<uchar> status;
 	findFundamentalMat(PointSet1,PointSet2,CV_RANSAC, _fmatThr, 0.99, status);
 	int time = 0;
 	vector<Point2f> goodPoints1,goodPoints2;
+
+	if (status.size() < 8) {
+		return;
+	}
+
 	for (i = 0; i < status.size(); i ++)
 	{
 		if (status[i] == 1)

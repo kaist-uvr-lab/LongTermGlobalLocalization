@@ -18,12 +18,13 @@ class LSM {
 public:
 	LSM();
 	~LSM();
-	LSM(bool isProvideLines);
+	LSM(bool isProvideLines, bool isPrecomputedF);
 	void setImgLines(char* imgName1, char* imgName2, char* providedLines1, char* providedLines2);
 	void detectLine(char* imfile, Mat &mLines, float minLineLength);
 	void drawDectectedLine(Mat Img, Mat mLines, string imgName);
 	void drawPartiallyConnectedLine(Mat Img, Mat mLines, string imgName, Mat fans);
 	pair<Mat*, Mat*> lsm(Mat &given_lines1, Mat &given_lines2);
+	void setFmat(Mat &Fmat) { _Fmat = Fmat; }
 
 public:
 	char* mImgName1;
@@ -31,9 +32,13 @@ public:
 	char* mProvidedLines1;
 	char* mProvidedLines2;
 	bool mIsProvideLines;
+	bool mIsPrecomputedF;
 
 private:
 	string outLineMatchesFileName = "result.txt";
+
+	// Precomputed F matrix
+	Mat _Fmat;
 
 	// show intermediate results or not
 	bool isVerbose = true;

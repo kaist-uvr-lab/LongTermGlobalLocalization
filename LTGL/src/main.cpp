@@ -124,7 +124,7 @@ int main(int argc, char **argv)
 	ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, true, (bool)atoi(argv[4]));
 
 	// Generate Global Map using ORB-SLAM. 
-	//mapGeneration(SLAM, vstrImageFilenames, vTimestamps, imgDir, iteration);
+	//MapGeneration(SLAM, vstrImageFilenames, vTimestamps, imgDir, iteration);
 
 	// If we need undistorted images, perform undistortion. 
 	//Undistort(string(argv[2]), vstrImageFilenames, imgDir);

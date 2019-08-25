@@ -16,6 +16,7 @@ public:
 
 	// For cross product. 
 	cv::Mat SkewSymMat(float x, float y, float z);
+	cv::Mat SkewSymMat(cv::Mat &m);
 
 	// For image undistortion. 
 	void Undistort(string &strSettingPath, vector<string> &vstrImageFilenames, string &imgDir);
@@ -28,6 +29,9 @@ public:
 
 	// Save Keyframe information from given indices.
 	void SaveKFinfo(vector<int> vKFindices, string writePath);
+
+	// Compute F Matrix from T and K.
+	cv::Mat ComputeFMatrix(const cv::Mat &_T, const cv::Mat &_K);
 
 	// Two View Triangulation.
 	int TwoViewTriangulation(pair<cv::Mat*, cv::Mat*> _pairLines, const cv::Mat &_K, const cv::Mat &_invK, KeyFrame *_pKF1, KeyFrame *_pKF2, Map *_pMap);

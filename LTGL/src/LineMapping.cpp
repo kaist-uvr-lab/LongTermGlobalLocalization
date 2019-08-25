@@ -12,7 +12,12 @@ void LineMapping::test() {
 
 cv::Mat LineMapping::SkewSymMat(float x, float y, float z){
 	Mat Ax = (Mat_<float>(3, 3, CV_32F) << 0, -z, y, z, 0, -x, -y, x, 0);
-	return Ax;
+	return Ax.clone();
+}
+
+cv::Mat LineMapping::SkewSymMat(cv::Mat &m) {
+	// when m is a vector composed of 3 values. 
+	return SkewSymMat(m.at<float>(0), m.at<float>(1), m.at<float>(2));
 }
 
 void LineMapping::Undistort(string &strSettingPath, vector<string> &vstrImageFilenames, string &imgDir) {
@@ -106,12 +111,31 @@ void LineMapping::SaveKFinfo(vector<int> vKFindices, string writePath) {
 	}
 }
 
+cv::Mat LineMapping::ComputeFMatrix(const cv::Mat &_T, const cv::Mat &_K){
+	//Compute F Matrix from given Relative Camera Pose.
+	//R,t should be relative matrix.(C1 -> C2)
+	cv::Mat R = _T.rowRange(0, 3).colRange(0, 3);
+	cv::Mat t = _T.rowRange(0, 3).col(3);
+	cv::Mat Kinv = _K.inv();
+	cv::Mat F = Kinv.t() * SkewSymMat(t) * R * Kinv;
+	return F.clone();
+}
+
 
 int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, const Mat &_K, const Mat &_invK, KeyFrame *_pKF1, KeyFrame *_pKF2, Map *_pMap) {
 	
 	int nCreatedLines = 0;
 	Mat K = _K;
 	Mat invK = _invK;
+
+	Mat* matchedLines = _pairLines.first;
+	Mat* matchedLineIndices = _pairLines.second;
+
+	int nMatchedLines = matchedLines->rows;
+
+	if (nMatchedLines == 0) {
+		cout << "Pass triangulation" << endl;
+	}
 
 	// First get Plucker Coordinates of triangulated lines.  
 	Mat Ocw1 = _pKF1->GetCameraCenter();
@@ -122,11 +146,6 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, const Mat &_K
 	Mat Tcw2 = _pKF2->GetPose();
 	Mat Twc1 = Tcw1.inv();
 	Mat Twc2 = Tcw2.inv();
-
-	Mat* matchedLines = _pairLines.first;
-	Mat* matchedLineIndices = _pairLines.second;
-
-	int nMatchedLines = matchedLines->rows;
 
 	for (int i = 0; i < nMatchedLines; i++) {
 		Mat matchedPts = matchedLines->row(i);
@@ -263,8 +282,10 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	vector<int> vKFindices;
 	vKFindices.reserve(vpKFS.size());
 
-	// Prepare for line matching. 	
-	LSM* lineMatching = new LSM(true);
+	// Prepare for line matching.
+	bool isProvidedLines = true;
+	bool isPrecomputedF = true;
+	LSM* lineMatching = new LSM(isProvidedLines, isPrecomputedF);
 
 	//// Get all of the ids of keyframes. 
 	for (vector<ORB_SLAM2::KeyFrame*>::iterator vit = vpKFS.begin(), vend = vpKFS.end(); vit != vend; vit++) {
@@ -280,8 +301,11 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		Mat K = pCurrentKF->mK;
 		Mat invK = K.inv();
 
+		if (pCurrentKF->mnFrameId != 706)
+			continue;
+
 		// Perform triangulation only for co-visible keyframes. 
-		vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(10);
+		vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(20);
 
 		CIO io;
 		Mat lines1, lines2;
@@ -292,7 +316,9 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		io.loadData(lineName1, lines1);
 		pCurrentKF->SetExtracted2DLines(lines1);
 
-		for (vector<ORB_SLAM2::KeyFrame*>::iterator vTmpit = vCovisibleKFs.begin(), vTmpend2 = vCovisibleKFs.end(); vTmpit != vTmpend2; vTmpit++) {
+		// Starts from farthest frame
+		for (vector<ORB_SLAM2::KeyFrame*>::reverse_iterator vTmpit= vCovisibleKFs.rbegin(); vTmpit != vCovisibleKFs.rend(); ++vTmpit) {
+		//for (vector<ORB_SLAM2::KeyFrame*>::iterator vTmpit = vCovisibleKFs.begin(), vTmpend2 = vCovisibleKFs.end(); vTmpit != vTmpend2; vTmpit++) {
 			ORB_SLAM2::KeyFrame* pTmpKF = *vTmpit;
 
 			// Perform Line Matching First. 
@@ -311,11 +337,19 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			// For now, F Matrix is calculated through L-J-L points. 
 			lineMatching->setImgLines(imgName1, imgName2, lineName1, lineName2);
 
+			// Compute F Matrix from computed R,t. 
+			Mat Tcw1 = pCurrentKF->GetPose();
+			Mat Tcw2 = pTmpKF->GetPose();
+			Mat T21 = Tcw2 * Tcw1.inv();
+			Mat Fmat = ComputeFMatrix(T21, pCurrentKF->mK);
+
 			// matchedLines has a form of  (ps1.x, ps1.y, pe1.x, pe1.y, ps2.x, ps2.y, pe2.x, pe2.y)xN rows.
+			if (isPrecomputedF)
+				lineMatching->setFmat(Fmat);
 			pair<Mat*, Mat*> mLines = lineMatching->lsm(lines1, lines2);
 			int nCreatedLines = TwoViewTriangulation(mLines, K, invK, pCurrentKF, pTmpKF, _mpMap);
 
-			
+			cout << nCreatedLines << " lines have newly created..\n "<<endl;
 			int c = 1;
 
 			/****************To do**************************************************/

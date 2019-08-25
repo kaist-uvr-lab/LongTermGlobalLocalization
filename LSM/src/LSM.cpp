@@ -25,7 +25,7 @@ LSM::LSM() {
 LSM::~LSM() {
 }
 
-LSM::LSM(bool isProvideLines):mIsProvideLines(isProvideLines){}
+LSM::LSM(bool isProvideLines, bool isPrecomputedF):mIsProvideLines(isProvideLines), mIsPrecomputedF(isPrecomputedF){}
 
 void LSM::setImgLines(char* imgName1, char* imgName2, char* providedLines1, char* providedLines2) {
 	mImgName1 = imgName1;
@@ -136,7 +136,7 @@ void LSM::drawPartiallyConnectedLine(Mat Img, Mat mLines, string imgName, Mat fa
 		circle(Img, Point2f(pdat[0], pdat[1]), 5, cvScalar(R, G, B), -1);
 	}
 
-	//imshow(imgName, Img);
+	imshow(imgName, Img);
 	//waitKey(20);
 }
 
@@ -229,10 +229,10 @@ pair<Mat*, Mat*> LSM::lsm(Mat &given_lines1, Mat&given_lines2) {
 		isVerbose, isBuildingImagePyramids, nAvgDesDist, isProvideJunc, isTwoLineHomography,
 		nOctave, nOctaveLayer, desDistThrEpi, desDistThrProg, fmatThr, hmatThr, nNeighborPts, nEnterGroup,
 		rotAngThr, sameSideRatio, regionHeight, junctionDistThr, intensityProfileWidth, radiusPointMatchUnique, difAngThr,
-		rcircle, truncateThr, fanThr, outLineMatchesFileName);
+		rcircle, truncateThr, fanThr, outLineMatchesFileName, mIsPrecomputedF, _Fmat);
 
 	CIO *pIO = new CIO;
-	pIO->writeData(outLineMatchesFileName, mlines);
+	//pIO->writeData(outLineMatchesFileName, mlines);
 
 	delete pIO;
 	pIO = NULL;
