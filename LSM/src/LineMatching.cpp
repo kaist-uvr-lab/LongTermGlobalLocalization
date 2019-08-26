@@ -38,7 +38,15 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 	strline1 = new strLine[nline1];
 	nline2 = tline2.rows;
 	strline2 = new strLine[nline2];	
-	
+
+	mlines.release();
+	mlineIndex.release();
+
+	//Added 
+	/***************To DO***********************/
+	// Save LJL feature into database. 
+
+
 	for(int i = 0; i < nline1; i++)
 	{
 		Point2f tpt;
@@ -78,10 +86,10 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 		initialize_selfGenJunctions(img1, strline1, nline1,  nodes1, vstrFanSection1);
 		initialize_selfGenJunctions(img2, strline2, nline2,  nodes2, vstrFanSection2);	
 	}	
-	cout<<"LJLs  constructed in the first image: " << vstrFanSection1.size()<<endl;
-	cout<<"LJLs constructed in the second image: " << vstrFanSection2.size()<<endl;
+	//cout<<"LJLs  constructed in the first image: " << vstrFanSection1.size()<<endl;
+	//cout<<"LJLs constructed in the second image: " << vstrFanSection2.size()<<endl;
 
-	cout<<"Describing and matching LJLs (may last for a while)..." << endl;
+	//cout<<"Describing and matching LJLs (may last for a while)..." << endl;
 
 	calcGrad(img1, gMag1, gDir1);
 	calcGrad(img2, gMag2, gDir2);
@@ -144,7 +152,7 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 	}
 	vstrPointMatch = tvstrPointMatch;
 	vstrFanMatch = tvstrFanMatch;	
-	cout<<"Putative LJL matches: "<<tvstrPointMatch.size()<< endl;
+	//cout<<"Putative LJL matches: "<<tvstrPointMatch.size()<< endl;
 	if (isVerbose) plotPointMatches(colorImg1.clone(), colorImg2.clone(), vstrPointMatch, "Putative LJL matches (show the junctions)");		
 		
 	nptsMatches = vstrPointMatch.size();
@@ -196,8 +204,8 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 		
 	uniqueLineMatch(vstrLineMatch,  vtmp);
 	if (isVerbose) plotLineMatches(colorImg1.clone(), colorImg2.clone(), vstrLineMatch, "Line matches filtered by epipolar line constraint");
-	cout<<"LJL matches filtered by epipolar line constraint: " << vstrFanMatch.size()<<endl;
-	cout<<"Line matches filtered by epipolar line constraint: " << vstrLineMatch.size()<<endl;	
+	/*cout<<"LJL matches filtered by epipolar line constraint: " << vstrFanMatch.size()<<endl;
+	cout<<"Line matches filtered by epipolar line constraint: " << vstrLineMatch.size()<<endl;	*/
 	float desDistThr = desDistThrProg;
 	float fDistThr = 1.0;
 	vector<strPointMatch> vEndPtMatch;
@@ -207,22 +215,22 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 	mtimer.PrintElapsedTimeMsg(msg);	
 	t1 = mtimer.GetElapsedSeconds();
 
-	printf("\nElapsed time for the first stage: %s.\n", msg);
+	//printf("\nElapsed time for the first stage: %s.\n", msg);
 
 	mtimer.Start();
 
-	cout<<"\n"<<"Begin LJL match propagation"<<endl;
+	//cout<<"\n"<<"Begin LJL match propagation"<<endl;
 	int nitr = 1;
 	while (1)
 	{
-		cout<<"*********Itreration " << nitr<<"**********"<<endl;
+		//cout<<"*********Itreration " << nitr<<"**********"<<endl;
 		updatePointMatchFromFanMatches();					
 		//cout<<"point matches after expanding: "<<vstrPointMatch.size()<<endl;
 		topoFilter(vstrFanMatch, vstrPointMatch); 		
-		cout<<"LJL matches filtered by topological constraint: " << vstrFanMatch.size()<<endl;
+		//cout<<"LJL matches filtered by topological constraint: " << vstrFanMatch.size()<<endl;
 		fanMatch2LineMatch(vstrFanMatch, vstrLineMatch);
 		uniqueLineMatch(vstrLineMatch, vtmp);				
-		cout<<"Line matches filtered by topological constraint: " << vstrLineMatch.size()<<endl;	
+		//cout<<"Line matches filtered by topological constraint: " << vstrLineMatch.size()<<endl;	
 		updatePointMatchFromFanMatches();
 		//cout<<"point matches after topological filtering: "<<vstrPointMatch.size()<<endl;
 		curNum = vstrFanMatch.size();
@@ -234,12 +242,12 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 		preNum = curNum;	
  		addFansMatch(desDistThr, fDistThr);
 
-		cout<<"LJL matches after propagation: " << vstrFanMatch.size()<<endl;
+		//cout<<"LJL matches after propagation: " << vstrFanMatch.size()<<endl;
  		updatePointMatchFromFanMatches();		
 		//cout<<"point matches after expanding: " << vstrPointMatch.size()<<endl;
 		fanMatch2LineMatch(vstrFanMatch, vstrLineMatch);
 		uniqueLineMatch(vstrLineMatch, vtmp);
-		cout<<"Line matches after propagation: " << vstrLineMatch.size()<<endl;	
+		//cout<<"Line matches after propagation: " << vstrLineMatch.size()<<endl;	
 		topoFilter(vstrFanMatch, vstrPointMatch);
 		//cout<<"LJL matches after topological filtering: " << vstrFanMatch.size()<<endl;
 		updatePointMatchFromFanMatches();		
@@ -248,7 +256,7 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 		//cout<<"LJL matches after propagation: " << vstrFanMatch.size()<<endl;
 		fDistThr += 2.0;
 		nitr++;
-		cout<<"\n";
+		//cout<<"\n";
 	}
 	
 	if (isVerbose) plotPointMatches(colorImg1.clone(), colorImg2.clone(), vstrPointMatch, "Point matches after propagation");
@@ -258,10 +266,10 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 	curNum = 0;	
 	mtimer.Stop();
 	mtimer.PrintElapsedTimeMsg(msg);
-	printf("\nElapsed time for the second stage: %s.\n", msg);
+	//printf("\nElapsed time for the second stage: %s.\n", msg);
 	float t2 = mtimer.GetElapsedSeconds();
 
-	cout<<"\nBegin matching line segments in individuals"<<endl;
+	//cout<<"\nBegin matching line segments in individuals"<<endl;
 	nitr = 1;
 	int prenum = vstrLineMatch.size();
 
@@ -285,7 +293,7 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 	}
 	mtimer.Stop();
 	mtimer.PrintElapsedTimeMsg(msg);
-	printf("\nElapsed time for the third stage: %s.\n", msg);
+	//printf("\nElapsed time for the third stage: %s.\n", msg);
 	float t3 = mtimer.GetElapsedSeconds();
 	float totTime = t1 + t2 + t3;
 	cout<<"Final line matches:" << vstrLineMatch.size()<<endl;	
@@ -329,7 +337,7 @@ void CLineMatching::lineMatches2Mat(Mat &mline, Mat &mlineIndex)
 		mlineIndex.push_back(tmatIndex);
 		
 		vser.push_back(ser1);
-		//	outFile<< ser1 << ' ' << ser2 <<endl;   //每列数据用 tab 隔开  			
+		outFile<< ser1 << ' ' << ser2 <<endl;   //每列数据用 tab 隔开  			
 	}		
 	vector<int> vsidex;
 	sortIdx(vser, vsidex, SORT_EVERY_ROW);
@@ -339,7 +347,7 @@ void CLineMatching::lineMatches2Mat(Mat &mline, Mat &mlineIndex)
 		int ser = vsidex.at(i);
 		int ser1 = vstrLineMatch[ser].serLine1;		
 		int ser2 = vstrLineMatch[ser].serLine2;		
-		outFile<< ser1 << ' ' << ser2 <<endl;   //每列数据用 tab 隔开  			
+		//outFile<< ser1 << ' ' << ser2 <<endl;   //每列数据用 tab 隔开  			
 	}
 }
 
@@ -1866,7 +1874,7 @@ void CLineMatching::addFansMatch(float desDistThr, float fDistThr)
 	uniqueFanMatch(tvstrFanMatch);
 
 
-	cout<<"tvstrFanMatch:" <<tvstrFanMatch.size();
+	//cout<<"tvstrFanMatch:" <<tvstrFanMatch.size();
 
 	int nNewFanMatch = tvstrFanMatch.size();
 	for (int i = 0; i < nNewFanMatch; i++)	

@@ -41,7 +41,7 @@ private:
 	Mat _Fmat;
 
 	// show intermediate results or not
-	bool isVerbose = true;
+	bool isVerbose = false;
 
 	// whether build image pyramids to deal with scale change betwen images to be matched;
 	// Set false when you know there is not scale or only slight scale change between the images,

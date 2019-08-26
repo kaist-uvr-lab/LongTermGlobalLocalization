@@ -728,6 +728,9 @@ void KeyFrame::serialize(Archive &ar, const unsigned int version)
     {
         unique_lock<mutex> lock_feature(mMutexFeatures);
         ar & mvpMapPoints; // hope boost deal with the pointer graph well
+		// added for lines
+		ar & mvpLines;
+		ar & mLines2D;
     }
     // BoW
     ar & mpKeyFrameDB;

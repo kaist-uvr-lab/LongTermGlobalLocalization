@@ -16,4 +16,45 @@ namespace ORB_SLAM2 {
 		nObs++;
 	}
 
+	#ifdef FUNC_MAP_SAVE_LOAD
+	template<class Archive>
+	void Line3d::serialize(Archive &ar, const unsigned int version)
+	{
+		// don't save the mutex
+		ar & mPlucker;
+		ar & mEndPts;
+		ar & mLineObservations;
+		ar & mpMap;
+		ar & nObs;
+
+		//ar & mnId & nNextId & mnFirstKFid & mnFirstFrame & nObs;
+		//// Tracking related vars
+		//ar & mTrackProjX;
+		//ar & mTrackProjY;
+		//ar & mTrackProjXR;
+		//ar & mbTrackInView;
+		//ar & mnTrackScaleLevel;
+		//ar & mTrackViewCos;
+		//ar & mnTrackReferenceForFrame;
+		//ar & mnLastFrameSeen;
+		//// Local Mapping related vars
+		//ar & mnBALocalForKF & mnFuseCandidateForKF;
+		//// Loop Closing related vars
+		//ar & mnLoopPointForKF & mnCorrectedByKF & mnCorrectedReference & mPosGBA & mnBAGlobalForKF;
+		//// don't save the mutex
+		//ar & mWorldPos;
+		//ar & mObservations;
+		//ar & mNormalVector;
+		//ar & mDescriptor;
+		//ar & mpRefKF;
+		//ar & mnVisible & mnFound;
+		//ar & mbBad & mpReplaced;
+		//ar & mfMinDistance & mfMaxDistance;
+		//ar & mpMap;
+		//// don't save the mutex
+	}
+	template void Line3d::serialize(boost::archive::binary_iarchive&, const unsigned int);
+	template void Line3d::serialize(boost::archive::binary_oarchive&, const unsigned int);
+	#endif
+
 }

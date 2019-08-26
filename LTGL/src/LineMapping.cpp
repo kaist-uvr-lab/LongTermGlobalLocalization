@@ -161,17 +161,17 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, const Mat &_K
 				continue;
 			}
 			else {
-				// Line1 is already registered. 
-				pLine3d1->AddObservation(_pKF1, matchedLineIndices->at<int>(i, 0));
-				_pKF1->AddLine3D(pLine3d1, matchedLineIndices->at<int>(i, 0));
+				// Line1 is already registered so only add observation for Line2. 
+				pLine3d1->AddObservation(_pKF2, matchedLineIndices->at<int>(i, 1));
+				_pKF2->AddLine3D(pLine3d1, matchedLineIndices->at<int>(i, 1));
 				continue;
 			}
 		}
 		else {
 			if (pLine3d2) {
-				// Line2 is already registered. 
-				pLine3d2->AddObservation(_pKF2, matchedLineIndices->at<int>(i, 1));
-				_pKF2->AddLine3D(pLine3d2, matchedLineIndices->at<int>(i, 1));
+				// Line2 is already registered so only add observation for Line1. 
+				pLine3d2->AddObservation(_pKF1, matchedLineIndices->at<int>(i, 0));
+				_pKF1->AddLine3D(pLine3d2, matchedLineIndices->at<int>(i, 0));
 				continue;
 			}
 		}
@@ -287,12 +287,20 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	bool isPrecomputedF = true;
 	LSM* lineMatching = new LSM(isProvidedLines, isPrecomputedF);
 
-	//// Get all of the ids of keyframes. 
+	// Get all of the ids of keyframes. 
+		
 	for (vector<ORB_SLAM2::KeyFrame*>::iterator vit = vpKFS.begin(), vend = vpKFS.end(); vit != vend; vit++) {
 		vKFindices.push_back((*vit)->mnFrameId);
 		sort(vKFindices.begin(), vKFindices.end(), less<int>());
-		SaveKFinfo(vKFindices, writeKFinfo);
 	}
+	
+	// Save KF info into text. 
+	SaveKFinfo(vKFindices, writeKFinfo);
+	
+	int count = 0;
+	int totalNlines = 0;
+	vector<int> vDoneIdx;
+	vDoneIdx.reserve(vpKFS.size());
 
 	////// Get all of the ids of keyframes. 
 	for (vector<ORB_SLAM2::KeyFrame*>::iterator vit = vpKFS.begin(), vend = vpKFS.end(); vit != vend; vit++) {
@@ -301,11 +309,13 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		Mat K = pCurrentKF->mK;
 		Mat invK = K.inv();
 
-		if (pCurrentKF->mnFrameId != 706)
-			continue;
+		cout << count << "/" << vpKFS .size() << "KeyFrames has done. " <<endl;
+		count++;
+		//if (count < 34)
+		//	continue;
 
 		// Perform triangulation only for co-visible keyframes. 
-		vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(20);
+		vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(15);
 
 		CIO io;
 		Mat lines1, lines2;
@@ -320,6 +330,10 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		for (vector<ORB_SLAM2::KeyFrame*>::reverse_iterator vTmpit= vCovisibleKFs.rbegin(); vTmpit != vCovisibleKFs.rend(); ++vTmpit) {
 		//for (vector<ORB_SLAM2::KeyFrame*>::iterator vTmpit = vCovisibleKFs.begin(), vTmpend2 = vCovisibleKFs.end(); vTmpit != vTmpend2; vTmpit++) {
 			ORB_SLAM2::KeyFrame* pTmpKF = *vTmpit;
+
+			// If it's already processed, pass. 
+			if (find(vDoneIdx.begin(), vDoneIdx.end(), pTmpKF->mnFrameId) != vDoneIdx.end())
+				continue;						
 
 			// Perform Line Matching First. 
 			string strImgName2 = imgDir + "/" + vstrImageFilenames[pTmpKF->mnFrameId];
@@ -349,16 +363,18 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			pair<Mat*, Mat*> mLines = lineMatching->lsm(lines1, lines2);
 			int nCreatedLines = TwoViewTriangulation(mLines, K, invK, pCurrentKF, pTmpKF, _mpMap);
 
-			cout << nCreatedLines << " lines have newly created..\n "<<endl;
-			int c = 1;
-
+			totalNlines += nCreatedLines;
+			cout << "************* " << nCreatedLines << " lines have newly created.. || Total created lines so far : "<< totalNlines << " *************\n" <<endl;
+			
 			/****************To do**************************************************/
 			//After lines have added, Optimization are done for robust registration. 
 			//if(nCreatedLines > 0)
 			//ORB_SLAM2::Optimizer::GlobalStructureOnlyBA.. 
 		}
+		vDoneIdx.push_back(pCurrentKF->mnFrameId);
 	}
 
+	cout << "Line Registration done. Total " << totalNlines << " lines are created. \n" << endl;
 
 	return 0;
 }
