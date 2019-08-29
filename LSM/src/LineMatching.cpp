@@ -115,6 +115,13 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 	vector<Point2f> vpts1, vpts2;
 	strPointMatch tstrPointMatch;
 	int nptsMatches = vstrFanMatch.size();
+
+	// If it generates not enough matches, pass it. 
+	if (nptsMatches < 5) {
+		cout << "Not enough LJL matches are generated. Pass.. " << endl;
+		return;
+	}
+
 	for(int i = 0; i < nptsMatches; i++)
 	{
 		int serial1 = vstrFanMatch[i].fserial1;
@@ -150,12 +157,18 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 		tvstrFanMatch.push_back(vstrFanMatch[curIdx]);
 		tvstrPointMatch.push_back(vstrPointMatch[curIdx]);					
 	}
+
 	vstrPointMatch = tvstrPointMatch;
 	vstrFanMatch = tvstrFanMatch;	
 	//cout<<"Putative LJL matches: "<<tvstrPointMatch.size()<< endl;
 	if (isVerbose) plotPointMatches(colorImg1.clone(), colorImg2.clone(), vstrPointMatch, "Putative LJL matches (show the junctions)");		
 		
 	nptsMatches = vstrPointMatch.size();
+	// If it generates not enough matches, pass it. 
+	if (nptsMatches < 10) {
+		cout << "Not enough LJL matches are generated. Pass.. " << endl;
+		return;
+	}
 	for(int i = 0; i < nptsMatches; i++)
 	{		
 		Point2f tpt = vstrPointMatch[i].point1;	
@@ -165,7 +178,6 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 	}
 
 	bool *pbIsKept = new bool[nptsMatches];	
-
 	// Added.
 	// If fundamental matrix is given, we can take advantage of it. 
 	if (_isPreComputedF) {

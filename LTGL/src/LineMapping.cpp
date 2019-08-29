@@ -314,6 +314,9 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		//if (count < 34)
 		//	continue;
 
+		//if (pCurrentKF->mnFrameId != 2029)
+		//	continue;
+
 		// Perform triangulation only for co-visible keyframes. 
 		vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(15);
 

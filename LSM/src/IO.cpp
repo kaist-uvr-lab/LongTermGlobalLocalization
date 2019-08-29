@@ -18,7 +18,7 @@ int CIO::loadData(string fileName, cv::Mat& matData, int matRows, int matCols, i
 	ifstream inFile(fileName.c_str(), ios_base::in);  
 	if(!inFile.is_open())  
 	{  
-		cout << "¶ÁÈ¡ÎÄ¼þÊ§°Ü" << endl;  
+		cout << "File not found!" << endl;  
 		retVal = -1;  
 		return (retVal);  
 	}  

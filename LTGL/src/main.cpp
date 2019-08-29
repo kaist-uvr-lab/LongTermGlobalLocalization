@@ -100,7 +100,7 @@ void Undistort(string &strSettingPath, vector<string> &vstrImageFilenames, strin
 
 int main(int argc, char **argv)
 {
-	if (argc != 5)
+	if (argc < 5)
 	{
 		cerr << endl << "Usage: ./mono_tum path_to_vocabulary path_to_settings path_to_sequence [1|0](save map?)" << endl;
 		return 1;
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
 	string strFile = imgDir + "/images.txt";
 	LoadImages(strFile, vstrImageFilenames, vTimestamps);
 
-	string writeKFinfo = imgDir + "/KFinfo.txt";
+	string writeKFinfo = imgDir + "/undistort/KFinfo.txt";
 	string lineDir = imgDir + "/results";
 
 	enum mode {OffLine, OnLine};
@@ -124,7 +124,11 @@ int main(int argc, char **argv)
 	ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, true, (bool)atoi(argv[4]));
 
 	// Generate Global Map using ORB-SLAM. 
-	//MapGeneration(SLAM, vstrImageFilenames, vTimestamps, imgDir, iteration);
+
+	bool isMapGeneration = atoi(argv[5]);
+	if ((isMapGeneration)) {
+		MapGeneration(SLAM, vstrImageFilenames, vTimestamps, imgDir, iteration);
+	}
 
 	// If we need undistorted images, perform undistortion. 
 	//Undistort(string(argv[2]), vstrImageFilenames, imgDir);
