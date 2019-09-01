@@ -1,10 +1,11 @@
 
 #include<System.h>
+
 #include"LineMapping.h"
 #include"Line3d.h"
 #include<LSM/src/LSM.h>
 #include<opencv2/core/core.hpp>
-
+#include "LineOptimizer.h"
 
 void LineMapping::test() {
 	int a = 1;
@@ -294,6 +295,8 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		sort(vKFindices.begin(), vKFindices.end(), less<int>());
 	}
 	
+	
+
 	// Save KF info into text. 
 	SaveKFinfo(vKFindices, writeKFinfo);
 	
@@ -366,12 +369,26 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			totalNlines += nCreatedLines;
 			cout << "************* " << nCreatedLines << " lines have newly created.. || Total created lines so far : "<< totalNlines << " *************\n" <<endl;
 			
+			vector<Line3d*> lines = pTmpKF->Get3DLines();
+
+			for (vector<ORB_SLAM2::Line3d*>::iterator vit = lines.begin(), vend = lines.end(); vit != vend; vit++) {
+				//Vertex. 
+				Line3d* pLine = *vit;
+				if (!pLine)
+					continue;
+				if (pLine->GetNumObservations() < 3)
+					continue;
+				ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
+			}
+
+
 			/****************To do**************************************************/
 			//After lines have added, Optimization are done for robust registration. 
 			//if(nCreatedLines > 0)
 			//ORB_SLAM2::Optimizer::GlobalStructureOnlyBA.. 
 		}
 		vDoneIdx.push_back(pCurrentKF->mnFrameId);
+
 	}
 
 	cout << "Line Registration done. Total " << totalNlines << " lines are created. \n" << endl;

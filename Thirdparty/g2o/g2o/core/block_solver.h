@@ -184,6 +184,8 @@ namespace g2o {
   typedef BlockSolver< BlockSolverTraits<7, 3> > BlockSolver_7_3;  
   // 2Dof landmarks 3Dof poses
   typedef BlockSolver< BlockSolverTraits<3, 2> > BlockSolver_3_2;
+  //LINE optimization
+  typedef BlockSolver< BlockSolverTraits<4, 2> > BlockSolver_4_2;
 
 } // end namespace
 
