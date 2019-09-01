@@ -197,7 +197,7 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, const Mat &_K
 		normalC1 = SkewSymMat(normPtS1.at<float>(0), normPtS1.at<float>(1), 1) * normPtE1;
 		Mat normalW1 = Rcw1.t() * normalC1;
 		normalW1.rowRange(0, 3).copyTo(plane1.rowRange(0, 3));
-		plane1.at<float>(3) = -normalC1.dot(Ocw1);
+		plane1.at<float>(3) = -normalW1.dot(Ocw1);
 
 		// Get plane p2 = [px', py', pz', pw'] in world coordinates
 		Mat plane2 = Mat::zeros(4, 1, CV_32F);
@@ -205,7 +205,7 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, const Mat &_K
 		normalC2 = SkewSymMat(normPtS2.at<float>(0), normPtS2.at<float>(1), 1) * normPtE2;
 		Mat normalW2 = Rcw2.t() * normalC2;
 		normalW2.rowRange(0, 3).copyTo(plane2.rowRange(0, 3));
-		plane2.at<float>(3) = -normalC2.dot(Ocw2);
+		plane2.at<float>(3) = -normalW2.dot(Ocw2);
 
 		// Triangulate only if we have enough parallax.
 		float test1 = (Rcw1.t() * normPtS1).dot(normalW2);
@@ -219,9 +219,16 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, const Mat &_K
 		Mat d_vector = (Mat_<float>(3, 1, CV_32F) << -dual_L.at<float>(1, 2), dual_L.at<float>(0, 2), -dual_L.at<float>(0, 1));
 		Mat n_vector = dual_L.col(3).rowRange(0, 3);
 		Mat triangulated_line = Mat::zeros(6, 1, CV_32F);
+		
+		// Make direction vector into unit length. 
+		//float magNvect = MagMat(d_vector);
+		//n_vector = n_vector / magNvect;
+		//d_vector = d_vector / magNvect;
 		n_vector.copyTo(triangulated_line.rowRange(0, 3));
 		d_vector.copyTo(triangulated_line.rowRange(3, 6));
 
+		if (isnan(n_vector.at<float>(0)) || isnan(n_vector.at<float>(1)) || isnan(n_vector.at<float>(2)))
+			int d = 1;
 		float depthS1 = ((Ocw2 - Ocw1).dot(normalW2)) / ((Rcw1.t() * normPtS1).dot(normalW2));
 		float depthE1 = ((Ocw2 - Ocw1).dot(normalW2)) / ((Rcw1.t() * normPtE1).dot(normalW2));
 		float depthS2 = ((Ocw1 - Ocw2).dot(normalW1)) / ((Rcw2.t() * normPtS2).dot(normalW1));
@@ -258,7 +265,7 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, const Mat &_K
 		float dist3 = PointToLineDist(projectedS1C2, ptS2, ptE2);
 		float dist4 = PointToLineDist(projectedE1C2, ptS2, ptE2);
 
-		Mat matArray[] = { point3DS1 , point3DE1, point3DS2, point3DE2 };
+		Mat matArray[] = { point3DS1.t() , point3DE1.t(), point3DS2.t(), point3DE2.t() };
 		Mat endPts;
 		cv::vconcat(matArray, 4, endPts);
 
@@ -314,11 +321,10 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 
 		cout << count << "/" << vpKFS .size() << "KeyFrames has done. " <<endl;
 		count++;
-		//if (count < 34)
-		//	continue;
 
-		//if (pCurrentKF->mnFrameId != 2029)
-		//	continue;
+		if (pCurrentKF->mnFrameId != 196 && pCurrentKF->mnFrameId != 595) {
+			continue;
+		}
 
 		// Perform triangulation only for co-visible keyframes. 
 		vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(15);
@@ -382,6 +388,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 				if (pLine->GetNumObservations() < 3)
 					continue;
 				ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
+				pLine->UpdateEndpts();
 			}
 
 

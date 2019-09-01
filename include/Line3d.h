@@ -27,6 +27,24 @@ namespace ORB_SLAM2 {
 		int GetNumObservations() {
 			return nObs;
 		}
+
+		// return magnitude of the matrix.
+		float MagMat(const cv::Mat &m);
+
+		// return distance between two points; 
+		float ComputeSigned1DDist(const cv::Mat &m1, const cv::Mat &m2);
+
+		// Update Endpts after optimization
+		void UpdateEndpts();
+
+		// Compute closest point from origin using Plucker Coordinate.
+		// Using it for getting a point passing through the line.
+		cv::Mat ClosestPointfromOrigin();
+
+		// Compute a point on L1 that makes closest distance between L1, L2. 
+		cv::Mat ClosestPointfromLine(cv::Mat p1, cv::Mat d1, cv::Mat p2, cv::Mat d2);
+
+
 	private:
 		// Position in plucker coordinate & world coordinate
 		cv::Mat mPlucker, mEndPts;

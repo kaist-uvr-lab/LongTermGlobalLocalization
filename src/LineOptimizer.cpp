@@ -155,6 +155,7 @@ namespace ORB_SLAM2{
 		g2o::LineVertex* vRecover = static_cast<g2o::LineVertex*>(optimizer.vertex(0));
 		Eigen::Vector4d param = vRecover->estimate();
 		cv::eigen2cv(g2o::LineConverter::ConvertPlukerCoordinates(vRecover->estimate()), Lw);
+		Lw.convertTo(Lw, CV_32F);
 		pLine->SetPluckerWorld(Lw);
 		
 		//cv::Mat temp = cv::Mat::zeros(100, 100, CV_8UC1);
