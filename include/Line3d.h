@@ -21,7 +21,12 @@ namespace ORB_SLAM2 {
 		cv::Mat GetEndPts() { return mEndPts; };
 
 		void Line3d::AddObservation(KeyFrame* pKF, size_t idx);
-
+		std::map<KeyFrame*, size_t> GetObservations() {
+			return mLineObservations;
+		}
+		int GetNumObservations() {
+			return nObs;
+		}
 	private:
 		// Position in plucker coordinate & world coordinate
 		cv::Mat mPlucker, mEndPts;
