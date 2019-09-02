@@ -322,9 +322,9 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		cout << count << "/" << vpKFS .size() << "KeyFrames has done. " <<endl;
 		count++;
 
-		if (pCurrentKF->mnFrameId != 196 && pCurrentKF->mnFrameId != 595) {
-			continue;
-		}
+		//if (pCurrentKF->mnFrameId != 196 && pCurrentKF->mnFrameId != 595) {
+		//	continue;
+		//}
 
 		// Perform triangulation only for co-visible keyframes. 
 		vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(15);

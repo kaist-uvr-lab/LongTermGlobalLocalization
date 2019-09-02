@@ -97,6 +97,12 @@ namespace ORB_SLAM2{
 			
 			e->spt << spt.at<float>(0), spt.at<float>(1), spt.at<float>(2);
 			e->spt << spt.at<float>(0), spt.at<float>(1), spt.at<float>(2);
+
+			// Missing assignment for e->ept
+			e->ept << ept.at<float>(0), ept.at<float>(1), ept.at<float>(2);
+			e->ept << ept.at<float>(0), ept.at<float>(1), ept.at<float>(2);
+
+
 			//e->T = Eigen::Matrix<double, 6, 6>(T.data);
 
 			float fx = pKF->fx;
@@ -142,7 +148,7 @@ namespace ORB_SLAM2{
 				
 				g2o::EdgeLineOptimization* e = vpEdgesLineOptimization[i];
 				float chi2 = e->chi2();
-				//std::cout <<"iter="<<it<< "err::" << chi2 << std::endl;
+				std::cout <<"iter="<<it<< "err::" << chi2 << std::endl;
 			}
 			
 			//g2o::LineVertex* vRecover = static_cast<g2o::LineVertex*>(optimizer.vertex(0));

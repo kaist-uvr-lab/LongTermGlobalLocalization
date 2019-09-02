@@ -60,15 +60,19 @@ namespace  g2o {
 		Vector6d Lc = T*Lw;
 
 		Vector3d Nc = Lc.block<3, 1>(0, 0);
+		Nc = K * Nc;
+
+		cout << K << endl;
+
 		double len = sqrt(Nc[0] * Nc[0] + Nc[1] * Nc[1]);
 		double len3 = len*len*len;
-		Matrix<double, 2, 3> J1;
-		J1.row(0) << Nc[0] * spt.dot(Nc) / len3 + spt[0] / len, Nc[1] * spt.dot(Nc) / len3 + spt[1] / len, 1 / len;
-		J1.row(1) << Nc[0] * ept.dot(Nc) / len3 + ept[0] / len, Nc[1] * ept.dot(Nc) / len3 + ept[1] / len, 1 / len;
+		Matrix<double, 2, 3> J1 = Matrix<double,2,3>::Zero();
+		J1.row(0) << -Nc[0] * spt.dot(Nc) / len3 + spt[0] / len, -Nc[1] * spt.dot(Nc) / len3 + spt[1] / len, 1 / len;
+		J1.row(1) << -Nc[0] * ept.dot(Nc) / len3 + ept[0] / len, -Nc[1] * ept.dot(Nc) / len3 + ept[1] / len, 1 / len;
 
-		Matrix<double, 3, 6> J2;
+		Matrix<double, 3, 6> J2 = Matrix<double, 3, 6>::Zero();
 		J2.block<3, 3>(0, 0) = K;
-		Matrix<double, 6, 4> J3;
+		Matrix<double, 6, 4> J3 = Matrix<double, 6, 4>::Zero();
 
 		Vector3d psi = v1->estimate().block<3, 1>(0, 0);
 		Matrix3d U = LineConverter::ConvertRotationMatrixFromEulerAngles(psi);
@@ -85,7 +89,10 @@ namespace  g2o {
 		J3.block<3, 1>(3, 2) = -w2 * U.col(0);
 		J3.block<3, 1>(3, 3) = w1 * U.col(1);
 
-		J3 = T.inverse()*J3;
+		cout << endl;
+		cout << J3 << endl;
+
+		J3 = T*J3;
 
 		Matrix<double, 2, 4> J = J1*J2*J3;
 
