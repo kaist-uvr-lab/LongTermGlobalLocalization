@@ -67,6 +67,8 @@ namespace ORB_SLAM2 {
 		cv::sortIdx(tmp1Ddist, sortedIdx, CV_SORT_EVERY_COLUMN + CV_SORT_ASCENDING);
 
 		// Update Endpts
+		/*cv::Mat newEndpt1 = tmpAllEndpts.row(0);
+		cv::Mat newEndpt2 = tmpAllEndpts.row(1);*/
 		cv::Mat newEndpt1 = tmpAllEndpts.row(sortedIdx.at<int>(0));
 		cv::Mat newEndpt2 = tmpAllEndpts.row(sortedIdx.at<int>(sortedIdx.rows - 1));
 		newEndpt1.copyTo(mEndPts.row(0).colRange(0, 3));
