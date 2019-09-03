@@ -38,11 +38,7 @@ namespace g2o {
 		virtual void oplusImpl(const double* update_) {
 			
 			/*Eigen::Map<const Eigen::Vector4d> v(update_);*/
-<<<<<<< HEAD
 			Eigen::Map<const Eigen::Vector4d> v(update_);
-=======
-			Eigen::Vector4d v(update_);
->>>>>>> 95e2869da816d2542bdf0b9b73f212b4f27eff42
 			//std::cout << "update param = " << v<<std::endl<<"before param="<<_estimate << std::endl;
 			_estimate += v;
 			//setEstimate(v + estimate());

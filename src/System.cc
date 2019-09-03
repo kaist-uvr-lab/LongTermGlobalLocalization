@@ -76,12 +76,18 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     }
 
 	// Map files 
-	cv::FileNode linemapfilen = fsSettings["Map.lineMapfile"];
-	if (!linemapfilen.empty())
+	cv::FileNode linemapfileNoOptn = fsSettings["Map.lineNotOptMapfile"];
+	if (!linemapfileNoOptn.empty())
 	{
-		linemapfile = (string)linemapfilen;
+		linemapfileNotOpt = (string)linemapfileNoOptn;
 	}
 
+	// Map files 
+	cv::FileNode linemapfileOptn = fsSettings["Map.lineOptMapfile"];
+	if (!linemapfileOptn.empty())
+	{
+		linemapfileOpt = (string)linemapfileOptn;
+	}
 #endif
 
     //Load ORB Vocabulary
@@ -428,7 +434,7 @@ void System::Shutdown(bool is_line_included)
 #ifdef FUNC_MAP_SAVE_LOAD
 	if (is_save_map) {
 		if(is_line_included)
-			SaveMap(linemapfile);
+			SaveMap(linemapfileOpt);
 		else
 			SaveMap(mapfile);
 	}
@@ -607,6 +613,18 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
 }
 
 #ifdef FUNC_MAP_SAVE_LOAD
+void System::SaveMap(int save_mode)
+{
+	enum MODE {ONLY_MAP, LINE_MAP_NOT_OPT, LINE_MAP_OPT};
+	string filename;
+	if (save_mode == ONLY_MAP)
+		SaveMap(mapfile);
+	else if (save_mode == LINE_MAP_NOT_OPT)
+		SaveMap(linemapfileNotOpt);
+	else
+		SaveMap(linemapfileOpt);
+}
+
 void System::SaveMap(const string &filename)
 {
     std::ofstream out(filename, std::ios_base::binary);

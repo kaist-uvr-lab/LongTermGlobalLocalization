@@ -322,7 +322,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		cout << count << "/" << vpKFS .size() << "KeyFrames has done. " <<endl;
 		count++;
 
-		//if (pCurrentKF->mnFrameId != 196 && pCurrentKF->mnFrameId != 595) {
+		//if (pCurrentKF->mnFrameId != 714) {
 		//	continue;
 		//}
 
@@ -378,21 +378,20 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			totalNlines += nCreatedLines;
 			cout << "************* " << nCreatedLines << " lines have newly created.. || Total created lines so far : "<< totalNlines << " *************\n" <<endl;
 			
-			vector<Line3d*> lines = pTmpKF->Get3DLines();
+			//vector<Line3d*> lines = pTmpKF->Get3DLines();
+			//for (vector<ORB_SLAM2::Line3d*>::iterator vit = lines.begin(), vend = lines.end(); vit != vend; vit++) {
+			//	//Vertex. 
+			//	Line3d* pLine = *vit;
+			//	if (!pLine)
+			//		continue;
+			//	if (pLine->GetNumObservations() < 3)
+			//		continue;
+			//	ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
+			//	pLine->UpdateEndpts();
+			//}
 
-			for (vector<ORB_SLAM2::Line3d*>::iterator vit = lines.begin(), vend = lines.end(); vit != vend; vit++) {
-				//Vertex. 
-				Line3d* pLine = *vit;
-				if (!pLine)
-					continue;
-				if (pLine->GetNumObservations() < 3)
-					continue;
-				ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
-				pLine->UpdateEndpts();
-			}
 
-
-			/****************To do**************************************************/
+			///****************To do**************************************************/
 			//After lines have added, Optimization are done for robust registration. 
 			//if(nCreatedLines > 0)
 			//ORB_SLAM2::Optimizer::GlobalStructureOnlyBA.. 
@@ -401,7 +400,76 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 
 	}
 
+	// Save the map before optimization. 
+	int save_mode = 1; // SAVE_MODE : ONLY_MAP(0), LINE_MAP_NOT_OPT(1), LINE_MAP_OPT(2)
+	SLAM.SaveMap(save_mode);
+
+	cout << "Wait for key.... " << endl;
+	char wait;
+	std::cin >> wait;
+
+
 	cout << "Line Registration done. Total " << totalNlines << " lines are created. \n" << endl;
+
+	cout << "----Optimizing of all the lines----" << endl;
+	cout << "----And Erasing unreliable lines, which include only two observations. -----" << endl;
+	int count2 = 0;
+	for (vector<ORB_SLAM2::KeyFrame*>::iterator vit = vpKFS.begin(), vend = vpKFS.end(); vit != vend; vit++) {
+		cout << "Optimization : " << count2 << " / " << vpKFS.size() << " KeyFrames has done. " << endl;
+		count2++;
+
+		KeyFrame* pUnOptKF = (*vit);
+		vector<Line3d*> lines = pUnOptKF->Get3DLines();
+		for (vector<ORB_SLAM2::Line3d*>::iterator vit = lines.begin(), vend = lines.end(); vit != vend; vit++) {
+			//Vertex. 
+			Line3d* pLine = *vit;
+			if (!pLine)
+				continue;
+			if (pLine->GetNumObservations() < 3) {
+				cout << "Erased!" << endl;
+				_mpMap->EraseLine3d(pLine);
+				continue;
+			}
+			ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
+			pLine->UpdateEndpts();
+		}
+	}
+
+	cout << "----Optimization done." << endl;
+	
+	// Save the map after optimization. 
+	save_mode = 2; // SAVE_MODE : ONLY_MAP(0), LINE_MAP_NOT_OPT(1), LINE_MAP_OPT(2)
+	SLAM.SaveMap(save_mode);
+
+	cout << "Wait for key.... " << endl;
+
+	std::cin >> wait;
+
+
+
+	//for (vector<ORB_SLAM2::KeyFrame*>::iterator vit = vpKFS.begin(), vend = vpKFS.end(); vit != vend; vit++) {
+	//	cout << "Optimization : " << count2 << " / " << vpKFS.size() << " KeyFrames has done. " << endl;
+	//	count2++;
+
+	//	KeyFrame* pUnOptKF = (*vit);
+	//	vector<Line3d*> lines = pUnOptKF->Get3DLines();
+	//	for (vector<ORB_SLAM2::Line3d*>::iterator vit = lines.begin(), vend = lines.end(); vit != vend; vit++) {
+	//		//Vertex. 
+	//		Line3d* pLine = *vit;
+	//		if (!pLine)
+	//			continue;
+	//		if (pLine->GetNumObservations() < 3)
+	//			continue;
+	//		ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
+	//		pLine->UpdateEndpts();
+	//	}
+	//}
+
+
+
+
+	/****************To do**************************************************/
+
 
 	return 0;
 }

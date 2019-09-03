@@ -149,6 +149,10 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 	uniqueChk(tmat, regulation, vKeptIdx);	
 
 	int nKeptIdx = vKeptIdx.size();
+	if (nKeptIdx < 5) {
+		cout << "Not enough nKeptIdx. Pass.. " << endl;
+		return;
+	}
 	vector<strFanMatch>	  tvstrFanMatch;
 	vector<strPointMatch> tvstrPointMatch;
 	for (int i = 0; i < nKeptIdx; i++)				
@@ -176,6 +180,8 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 		tpt = vstrPointMatch[i].point2;		
 		vpts2.push_back(tpt);				
 	}
+
+	cout << "Epipolar geometry check.. " << endl;
 
 	bool *pbIsKept = new bool[nptsMatches];	
 	// Added.

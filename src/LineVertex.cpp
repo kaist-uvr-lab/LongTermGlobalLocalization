@@ -62,11 +62,9 @@ namespace  g2o {
 		Vector3d Nc = Lc.block<3, 1>(0, 0);
 		Nc = K * Nc;
 
-<<<<<<< HEAD
+
 		//cout << K << endl;
 
-=======
->>>>>>> 95e2869da816d2542bdf0b9b73f212b4f27eff42
 		double len = sqrt(Nc[0] * Nc[0] + Nc[1] * Nc[1]);
 		double len3 = len*len*len;
 		Matrix<double, 2, 3> J1 = Matrix<double,2,3>::Zero();
@@ -92,14 +90,12 @@ namespace  g2o {
 		J3.block<3, 1>(3, 2) = -w2 * U.col(0);
 		J3.block<3, 1>(3, 3) = w1 * U.col(1);
 
-<<<<<<< HEAD
+
 		/*cout << endl;
 		cout << J3 << endl;*/
 
 		J3 = T*J3;
 
-=======
->>>>>>> 95e2869da816d2542bdf0b9b73f212b4f27eff42
 		Matrix<double, 2, 4> J = J1*J2*J3;
 
 		//std::cout << "J=" << J << std::endl;
@@ -155,8 +151,8 @@ namespace  g2o {
 		
 		//std::cout << "L1 = " << L / testDist << std::endl << "L2=" << Lw2 << std::endl;
 		Matrix3d U2 = ConvertRotationMatrixFromEulerAngles(psi);
-		std::cout << "U==" << U << std::endl << "U2=" << U2 << ", " << std::endl;
-		std::cout << "PSI = " << psi << std::endl;
+		//std::cout << "U==" << U << std::endl << "U2=" << U2 << ", " << std::endl;
+		//std::cout << "PSI = " << psi << std::endl;
 		//std::cout<<"COS::"<<cos(0.0)<<", "<<cos(90.0)<<", "<<cos(90.0/180*CV_PI) << std::endl;
 		//std::cout << "param = " << res << std::endl;
 		return res;

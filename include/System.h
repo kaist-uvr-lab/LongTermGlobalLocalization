@@ -134,7 +134,8 @@ public:
 
 	//Added 
 	Map* GetMap();
-
+	// Save functions
+	void SaveMap(int save_mode);
 
 #ifdef FUNC_MAP_SAVE_LOAD
 private:
@@ -157,7 +158,7 @@ private:
     // Map structure that stores the pointers to all KeyFrames and MapPoints.
     Map* mpMap;
 #ifdef FUNC_MAP_SAVE_LOAD
-    string mapfile, linemapfile;
+    string mapfile, linemapfileNotOpt, linemapfileOpt;
     bool is_save_map;
 #endif
     // Tracker. It receives a frame and computes the associated camera pose.
