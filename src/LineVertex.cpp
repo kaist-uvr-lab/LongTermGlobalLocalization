@@ -62,7 +62,7 @@ namespace  g2o {
 		Vector3d Nc = Lc.block<3, 1>(0, 0);
 		Nc = K * Nc;
 
-		cout << K << endl;
+		//cout << K << endl;
 
 		double len = sqrt(Nc[0] * Nc[0] + Nc[1] * Nc[1]);
 		double len3 = len*len*len;
@@ -89,8 +89,8 @@ namespace  g2o {
 		J3.block<3, 1>(3, 2) = -w2 * U.col(0);
 		J3.block<3, 1>(3, 3) = w1 * U.col(1);
 
-		cout << endl;
-		cout << J3 << endl;
+		/*cout << endl;
+		cout << J3 << endl;*/
 
 		J3 = T*J3;
 
