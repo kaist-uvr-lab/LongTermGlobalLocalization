@@ -62,8 +62,11 @@ namespace  g2o {
 		Vector3d Nc = Lc.block<3, 1>(0, 0);
 		Nc = K * Nc;
 
+<<<<<<< HEAD
 		//cout << K << endl;
 
+=======
+>>>>>>> 95e2869da816d2542bdf0b9b73f212b4f27eff42
 		double len = sqrt(Nc[0] * Nc[0] + Nc[1] * Nc[1]);
 		double len3 = len*len*len;
 		Matrix<double, 2, 3> J1 = Matrix<double,2,3>::Zero();
@@ -89,11 +92,14 @@ namespace  g2o {
 		J3.block<3, 1>(3, 2) = -w2 * U.col(0);
 		J3.block<3, 1>(3, 3) = w1 * U.col(1);
 
+<<<<<<< HEAD
 		/*cout << endl;
 		cout << J3 << endl;*/
 
 		J3 = T*J3;
 
+=======
+>>>>>>> 95e2869da816d2542bdf0b9b73f212b4f27eff42
 		Matrix<double, 2, 4> J = J1*J2*J3;
 
 		//std::cout << "J=" << J << std::endl;
@@ -149,30 +155,54 @@ namespace  g2o {
 		
 		//std::cout << "L1 = " << L / testDist << std::endl << "L2=" << Lw2 << std::endl;
 		Matrix3d U2 = ConvertRotationMatrixFromEulerAngles(psi);
-		//std::cout << "U==" << U << std::endl << "U2=" << U2 << ", " << std::endl;
+		std::cout << "U==" << U << std::endl << "U2=" << U2 << ", " << std::endl;
+		std::cout << "PSI = " << psi << std::endl;
 		//std::cout<<"COS::"<<cos(0.0)<<", "<<cos(90.0)<<", "<<cos(90.0/180*CV_PI) << std::endl;
 		//std::cout << "param = " << res << std::endl;
 		return res;
 	}
 
 	Vector3d LineConverter::ConvertEulerAnglesFromRotationMatrix(Matrix3d R) {
-		double sy = sqrt(R(0, 0) * R(0, 0) + R(1, 0) * R(1, 0));
+		//ZYX
+		//double sy = sqrt(R(0, 0) * R(0, 0) + R(1, 0) * R(1, 0));
+
+		//bool singular = sy < 1e-6; // If
+
+		//float x, y, z;
+		//if (!singular)
+		//{
+		//	x = atan2(R(2, 1), R(2, 2));
+		//	y = atan2(-R(2, 0), sy);
+		//	z = atan2(R(1, 0), R(0, 0));
+		//}
+		//else
+		//{
+		//	x = atan2(-R(1, 2), R(1, 1));
+		//	y = atan2(-R(2, 0), sy);
+		//	z = 0;
+		//};
+
+		//XYZ
+		double sy = sqrt(R(0, 0) * R(0, 0) + R(0,1) * R(0,1));
 
 		bool singular = sy < 1e-6; // If
 
 		float x, y, z;
 		if (!singular)
 		{
-			x = atan2(R(2, 1), R(2, 2));
-			y = atan2(-R(2, 0), sy);
-			z = atan2(R(1, 0), R(0, 0));
+			x = atan2(-R(1,2), R(2, 2));
+			y = atan2(R(0,2), sy);
+			z = atan2(-R(0,1), R(0, 0));
 		}
 		else
 		{
-			x = atan2(-R(1, 2), R(1, 1));
+			std::cout << "cos(y) is zero" << std::endl;
+			//수정 필요
+			/*x = atan2(-R(1, 2), R(1, 1));
 			y = atan2(-R(2, 0), sy);
-			z = 0;
+			z = 0;*/
 		};
+
 		return Vector3d(x, y, z);
 	}
 	Matrix<double, 3, 3> LineConverter::ConvertRotationMatrixFromEulerAngles(Vector3d vec) {
@@ -186,7 +216,7 @@ namespace  g2o {
 		Rz << cos(vec[2]), -sin(vec[2]), 0,
 			sin(vec[2]), cos(vec[2]), 0,
 			0, 0, 1;
-		return Rz*Ry*Rx;
+		return Rx*Ry*Rz;//Rz*Ry*Rx;
 	}
 	void LineConverter::CalcTheta(double phi, double& w1, double& w2) {
 		w1 = std::cos(phi);
