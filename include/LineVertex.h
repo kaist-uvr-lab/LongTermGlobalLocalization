@@ -39,10 +39,10 @@ namespace g2o {
 			
 			/*Eigen::Map<const Eigen::Vector4d> v(update_);*/
 			Eigen::Vector4d v(update_);
-			std::cout << "update param = " << v<<std::endl<<"before param="<<_estimate << std::endl;
+			//std::cout << "update param = " << v<<std::endl<<"before param="<<_estimate << std::endl;
 			_estimate += v;
 			//setEstimate(v + estimate());
-			std::cout << "after = " << estimate() << std::endl;
+			//std::cout << "after = " << estimate() << std::endl;
 
 		}
 
