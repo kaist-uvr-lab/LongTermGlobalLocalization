@@ -364,17 +364,21 @@ void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap){
 
 			// Perform RANSAC 
 			// First create line model through sampling. 
-			// Here, since there would be small number of observations (about maximum 20~30), do exhaustive search. 			
+			// Here, since there would be small number of observations (about maximum 20~30), do exhaustive search. 
+			float finalError = 0;
+			int finalInliers = 0;
+			Mat finalPlucker;
+			map<KeyFrame*, bool> finalInlierIdx, tmpInlierIdx;
+
 			vector<KeyFrame*> vObsKFs;
 			vObsKFs.reserve(nObs);
 
 			for (map<KeyFrame*, size_t>::iterator mit = mAllObervations.begin(), mend = mAllObervations.end(); mit != mend; mit++) {
 				vObsKFs.push_back(mit->first);
+				finalInlierIdx[mit->first] = false;
 			}
 
-			float finalError = 0;
-			int finalInliers = 0;
-			Mat finalPlucker;
+
 			float th = sqrt(5.994) * 2;
 			//for (int n1 = 0; n1 < min(nObs, 5) - 1; n1++) {
 			//	for (int n2 = n1 + 1; n2 < min(nObs, 5); n2++) {
@@ -387,24 +391,29 @@ void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap){
 					Mat matLine2d2 = pTmpKF2->Get2DLine(mAllObervations[pTmpKF2]);
 
 					Mat matTmpPlucker = Mat::zeros(6, 1, CV_32F);
+
 					// Initialize plucker coordinates using given two frames. 
 					if (!InitializeLineParam(pTmpKF1, pTmpKF2, matLine2d1, matLine2d2, matTmpPlucker, _mpMap))
 						continue;
 
 					// Test Score for created model.
-					pair<float, int> eval = ComputeModelScore(matTmpPlucker, pTmpKF1->mK, mAllObervations, th);
+					pair<float, int> eval = ComputeModelScore(matTmpPlucker, pTmpKF1->mK, mAllObervations, tmpInlierIdx, th);
 
 					if (n1 == 0 && n2 == 1) {
 						//Initialize the values
 						finalError = eval.first;
 						finalInliers = eval.second;
 						finalPlucker = matTmpPlucker;
+						if (tmpInlierIdx.size() > 0)
+							finalInlierIdx = tmpInlierIdx;
 					}
 					else if (eval.second > finalInliers) {
 						if (eval.first < finalError) {
 							finalError = eval.first;
 							finalInliers = eval.second;
 							finalPlucker = matTmpPlucker;
+							if (tmpInlierIdx.size() > 0)
+								finalInlierIdx = tmpInlierIdx;
 						}
 					}
 				}
@@ -420,6 +429,13 @@ void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap){
 
 			pCurrentLine3d->SetPluckerWorld(finalPlucker);
 			pCurrentLine3d->UpdateEndpts();
+
+			//Erase observation for outliers.
+			for (map<KeyFrame*, size_t>::iterator mit = mAllObervations.begin(), mend = mAllObervations.end(); mit != mend; mit++) {
+				if(!finalInlierIdx[mit->first])
+					pCurrentLine3d->EraseObservation(mit->first);
+			}
+
 		}
 
 	}
@@ -538,7 +554,7 @@ bool LineMapping::InitializeLineParam(KeyFrame *_pKF1, KeyFrame *_pKF2, const Ma
 	return true;
 }
 
-pair<float,int> LineMapping::ComputeModelScore(const Mat &tmpPlucker, const Mat &K, map<KeyFrame*, size_t> allObservations, const float th){
+pair<float,int> LineMapping::ComputeModelScore(const Mat &tmpPlucker, const Mat &K, map<KeyFrame*, size_t> allObservations, map<KeyFrame*, bool> &inlierIndex, const float th){
 	
 	float error = 0;
 	int inliers = 0;
@@ -578,11 +594,14 @@ pair<float,int> LineMapping::ComputeModelScore(const Mat &tmpPlucker, const Mat 
 		float len = sqrt(projectedL2d.at<float>(0)*projectedL2d.at<float>(0) + projectedL2d.at<float>(1)*projectedL2d.at<float>(1));
 		float tmpE = abs(spt.dot(projectedL2d) / len + ept.dot(projectedL2d) / len);
 		
-		if (abs(tmpE) > th)
+		if (abs(tmpE) > th) {
+			inlierIndex[pTmpKF] = false;
 			continue;
+		}
 		
 		error += tmpE;
 		inliers++;
+		inlierIndex[pTmpKF] = true;
 
 	}
 
@@ -595,7 +614,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	ORB_SLAM2::Map* _mpMap = SLAM.GetMap();
 	vector<ORB_SLAM2::KeyFrame*> vpKFS = _mpMap->GetAllKeyFrames();
 
-	bool isLineRegisterInitDone = false;
+	bool isLineRegisterInitDone = true;
 	bool isLineRANSACInitDone = false;
 	bool isLSD = false;
 	bool isProvidedLines = true;
@@ -698,23 +717,23 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 					lineMatching->setFmat(Fmat);
 				pair<Mat*, Mat*> mLines = lineMatching->lsm();
 
-				/*int nCreatedLines = TwoViewTriangulation(mLines, K, invK, pCurrentKF, pTmpKF, _mpMap);*/
+				//int nCreatedLines = TwoViewTriangulation(mLines, K, invK, pCurrentKF, pTmpKF, _mpMap);
 				int nCreatedLines = CollectObservations(mLines, K, invK, pCurrentKF, pTmpKF, _mpMap);
 
 				totalNlines += nCreatedLines;
 				cout << "************* " << nCreatedLines << " lines have newly created.. || Total created lines so far : " << totalNlines << " *************\n" << endl;
 
-				//vector<Line3d*> lines = pTmpKF->Get3DLines();
-				//for (vector<ORB_SLAM2::Line3d*>::iterator vit = lines.begin(), vend = lines.end(); vit != vend; vit++) {
-				//	//Vertex. 
-				//	Line3d* pLine = *vit;
-				//	if (!pLine)
-				//		continue;
-				//	if (pLine->GetNumObservations() < 3)
-				//		continue;
-				//	ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
-				//	pLine->UpdateEndpts();
-				//}
+				vector<Line3d*> lines = pTmpKF->Get3DLines();
+				for (vector<ORB_SLAM2::Line3d*>::iterator vit = lines.begin(), vend = lines.end(); vit != vend; vit++) {
+					//Vertex. 
+					Line3d* pLine = *vit;
+					if (!pLine)
+						continue;
+					if (pLine->GetNumObservations() < 3)
+						continue;
+					ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
+					pLine->UpdateEndpts();
+				}
 
 			}
 			vDoneIdx.push_back(pCurrentKF->mnFrameId);

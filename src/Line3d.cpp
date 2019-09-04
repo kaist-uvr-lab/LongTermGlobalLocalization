@@ -15,6 +15,22 @@ namespace ORB_SLAM2 {
 		nObs++;
 	}
 
+	void Line3d::EraseObservation(KeyFrame* pKF)
+	{
+		bool bBad = false;
+		{
+			if (mLineObservations.count(pKF))
+			{
+				int idx = mLineObservations[pKF];
+				nObs--;
+				mLineObservations.erase(pKF);
+
+				//// If only 2 observations or less, discard point
+				//if (nObs <= 2)
+				//	bBad = true;
+			}
+		}
+	}
 	void Line3d::UpdateEndpts() {
 		//Update all of the endpts. 
 		cv::Mat tmpAllEndpts;

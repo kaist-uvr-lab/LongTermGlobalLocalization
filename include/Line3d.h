@@ -44,7 +44,11 @@ namespace ORB_SLAM2 {
 		// Compute a point on L1 that makes closest distance between L1, L2. 
 		cv::Mat ClosestPointfromLine(cv::Mat p1, cv::Mat d1, cv::Mat p2, cv::Mat d2);
 
+		// Get Line3d index in give Keyframe
 		int GetIndexInKeyFrame(KeyFrame *pKF);
+
+		// Erase given KF from the observation of Line3d.
+		void EraseObservation(KeyFrame* pKF);
 
 	private:
 		// Position in plucker coordinate & world coordinate

@@ -153,13 +153,13 @@ namespace ORB_SLAM2{
 			//
 			optimizer.optimize(its[it]);
 
-			//for (size_t i = 0, iend = vpEdgesLineOptimization.size(); i < iend; i++)
-			//{
-			//	
-			//	g2o::EdgeLineOptimization* e = vpEdgesLineOptimization[i];
-			//	float chi2 = e->chi2();
-			//	std::cout <<"iter="<<it<< "err::" << chi2 << std::endl;
-			//}
+			for (size_t i = 0, iend = vpEdgesLineOptimization.size(); i < iend; i++)
+			{
+				
+				g2o::EdgeLineOptimization* e = vpEdgesLineOptimization[i];
+				float chi2 = e->chi2();
+				std::cout <<"iter="<<it<< "err::" << chi2 << std::endl;
+			}
 			
 			//g2o::LineVertex* vRecover = static_cast<g2o::LineVertex*>(optimizer.vertex(0));
 			//cv::Mat Lw;
