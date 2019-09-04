@@ -19,18 +19,18 @@ public:
 	LSM();
 	~LSM();
 	LSM(bool isProvideLines, bool isPrecomputedF);
-	void setImgLines(char* imgName1, char* imgName2, char* providedLines1, char* providedLines2);
+	void setImgLines(char* imgName1, char* imgName2, const Mat &providedLines1, const Mat &providedLines2);
 	void detectLine(char* imfile, Mat &mLines, float minLineLength);
 	void drawDectectedLine(Mat Img, Mat mLines, string imgName);
 	void drawPartiallyConnectedLine(Mat Img, Mat mLines, string imgName, Mat fans);
-	pair<Mat*, Mat*> lsm(Mat &given_lines1, Mat &given_lines2);
+	pair<Mat*, Mat*> lsm();
 	void setFmat(Mat &Fmat) { _Fmat = Fmat; }
 
 public:
 	char* mImgName1;
 	char* mImgName2;
-	char* mProvidedLines1;
-	char* mProvidedLines2;
+	Mat mProvidedLines1;
+	Mat mProvidedLines2;
 	bool mIsProvideLines;
 	bool mIsPrecomputedF;
 

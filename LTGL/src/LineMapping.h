@@ -11,9 +11,6 @@ using namespace ORB_SLAM2;
 class LineMapping {
 public:
 
-	
-	void test();
-
 	// For cross product. 
 	cv::Mat SkewSymMat(float x, float y, float z);
 	cv::Mat SkewSymMat(cv::Mat &m);
@@ -35,6 +32,18 @@ public:
 
 	// Two View Triangulation.
 	int TwoViewTriangulation(pair<cv::Mat*, cv::Mat*> _pairLines, const cv::Mat &_K, const cv::Mat &_invK, KeyFrame *_pKF1, KeyFrame *_pKF2, Map *_pMap);
+
+	// Add only Observations.
+	int CollectObservations(pair<cv::Mat*, cv::Mat*> _pairLines, const cv::Mat &_K, const cv::Mat &_invK, KeyFrame *_pKF1, KeyFrame *_pKF2, Map *_pMap);
+
+	// Initialize the line parameter via RANSAC.
+	void InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap);
+
+	// Initialize via two-view triangulation.
+	bool InitializeLineParam(KeyFrame *_pKF1, KeyFrame *_pKF2, const cv::Mat &line2d1, const cv::Mat &line2d2, cv::Mat &tmpPlucker, Map *_pMap);
+
+	// Compute Score for given line model
+	pair<float, int> ComputeModelScore(const cv::Mat &tmpPlucker, const cv::Mat &K, map<KeyFrame*, size_t> allObservations, const float th = sqrt(5.994) * 2);
 
 	// 3D Line Registration. 
 	int LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrLineFilenames, string &writeKFinfo, string &imgDir);

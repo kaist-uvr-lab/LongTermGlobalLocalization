@@ -27,7 +27,7 @@ LSM::~LSM() {
 
 LSM::LSM(bool isProvideLines, bool isPrecomputedF):mIsProvideLines(isProvideLines), mIsPrecomputedF(isPrecomputedF){}
 
-void LSM::setImgLines(char* imgName1, char* imgName2, char* providedLines1, char* providedLines2) {
+void LSM::setImgLines(char* imgName1, char* imgName2, const Mat &providedLines1, const Mat &providedLines2) {
 	mImgName1 = imgName1;
 	mImgName2 = imgName2;
 	mProvidedLines1 = providedLines1;
@@ -140,7 +140,7 @@ void LSM::drawPartiallyConnectedLine(Mat Img, Mat mLines, string imgName, Mat fa
 	//waitKey(20);
 }
 
-pair<Mat*, Mat*> LSM::lsm(Mat &given_lines1, Mat&given_lines2) {
+pair<Mat*, Mat*> LSM::lsm() {
 	Mat colorImg1 = imread(mImgName1, 3);
 	Mat colorImg2 = imread(mImgName2, 3);
 	Mat img1, img2;
@@ -153,8 +153,8 @@ pair<Mat*, Mat*> LSM::lsm(Mat &given_lines1, Mat&given_lines2) {
 	Mat keyPoints1, keyPoints2;
 	if (mIsProvideLines)
 	{
-		given_lines1.copyTo(lines1);
-		given_lines2.copyTo(lines2);
+		mProvidedLines1.copyTo(lines1);
+		mProvidedLines2.copyTo(lines2);
 
 		if (minLineLength != 0)
 		{

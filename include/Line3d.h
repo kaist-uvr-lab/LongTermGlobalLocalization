@@ -15,7 +15,7 @@ namespace ORB_SLAM2 {
 		Line3d(cv::Mat &_plucker, cv::Mat &_endPts, Map* pMap);
 
 		void SetPluckerWorld(cv::Mat &_plucker) { _plucker.copyTo(mPlucker); };
-		void SetEndPts(pair<float, float> &_endPts) { _endPts = make_pair(_endPts.first, _endPts.second); };
+		void SetEndPts(cv::Mat &_endPts) { _endPts.copyTo(mEndPts); };
 
 		cv::Mat GetPluckerWorld() { return mPlucker; };
 		cv::Mat GetEndPts() { return mEndPts; };
@@ -44,6 +44,7 @@ namespace ORB_SLAM2 {
 		// Compute a point on L1 that makes closest distance between L1, L2. 
 		cv::Mat ClosestPointfromLine(cv::Mat p1, cv::Mat d1, cv::Mat p2, cv::Mat d2);
 
+		int GetIndexInKeyFrame(KeyFrame *pKF);
 
 	private:
 		// Position in plucker coordinate & world coordinate

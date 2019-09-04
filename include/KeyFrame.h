@@ -253,6 +253,8 @@ public:
 	std::vector<Line3d*> Get3DLines() { return mvpLines; };
 	Line3d* Get3DLine(int idx) { return mvpLines[idx]; };
 	cv::Mat Get2DLine(int idx) { return mLines2D.row(idx); };
+	cv::Mat GetAll2DLines() { return mLines2D; };
+	void EraseLine3dMatch(Line3d* pLine3d);
 private:
 	// Extracted 2D lines.
 	cv::Mat mLines2D;

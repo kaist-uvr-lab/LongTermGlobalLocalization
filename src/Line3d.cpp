@@ -12,7 +12,6 @@ namespace ORB_SLAM2 {
 		if (mLineObservations.count(pKF))
 			return;
 		mLineObservations[pKF] = idx;
-
 		nObs++;
 	}
 
@@ -94,6 +93,13 @@ namespace ORB_SLAM2 {
 		return p_ortho.clone();
 	}
 
+	int Line3d::GetIndexInKeyFrame(KeyFrame *pKF)
+	{
+		if (mLineObservations.count(pKF))
+			return mLineObservations[pKF];
+		else
+			return -1;
+	}
 
 	cv::Mat Line3d::ClosestPointfromLine(cv::Mat p1, cv::Mat d1, cv::Mat p2, cv::Mat d2) {
 

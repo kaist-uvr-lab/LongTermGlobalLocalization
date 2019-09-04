@@ -630,10 +630,10 @@ void System::SaveMap(const string &filename)
     std::ofstream out(filename, std::ios_base::binary);
     if (!out)
     {
-        cerr << "Cannot Write to Mapfile: " << mapfile << std::endl;
+        cerr << "Cannot Write to Mapfile: " << filename << std::endl;
         exit(-1);
     }
-    cout << "Saving Mapfile: " << mapfile << std::flush;
+    cout << "Saving Mapfile: " << filename << std::flush;
     boost::archive::binary_oarchive oa(out, boost::archive::no_header);
     oa << mpMap;
     oa << mpKeyFrameDatabase;

@@ -228,6 +228,12 @@ void KeyFrame::EraseMapPointMatch(MapPoint* pMP)
         mvpMapPoints[idx]=static_cast<MapPoint*>(NULL);
 }
 
+// Added
+void KeyFrame::EraseLine3dMatch(Line3d* pLine3d) {
+	int idx = pLine3d->GetIndexInKeyFrame(this);
+	if (idx >= 0)
+		mvpLines[idx] = static_cast<Line3d*>(NULL);
+}
 
 void KeyFrame::ReplaceMapPointMatch(const size_t &idx, MapPoint* pMP)
 {
