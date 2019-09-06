@@ -18,6 +18,12 @@ public:
 	// For image undistortion. 
 	void Undistort(string &strSettingPath, vector<string> &vstrImageFilenames, string &imgDir);
 
+	// Find borders after undistortion. 
+	void ComputeImageBounds(const cv::Mat &K, const cv::Mat &distCoef, cv::Mat &im);
+
+	// Filter out lines on the boundaries.
+	void FilterBoundaryLines(cv::Mat &lines);
+
 	// Calculate Magnitude of given Matrix.
 	float MagMat(cv::Mat &m);
 
@@ -48,6 +54,9 @@ public:
 	// 3D Line Registration. 
 	int LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrLineFilenames, string &writeKFinfo, string &imgDir);
 
-private:
+	// Test with visualization
+	void TestVisualization(vector<ORB_SLAM2::KeyFrame*> vpKFS, string &imgDir, vector<string> &vstrImageFilenames);
 
+private:
+	float mnMinX, mnMinY, mnMaxX, mnMaxY;
 };

@@ -19,20 +19,6 @@ cv::Mat LineMapping::SkewSymMat(cv::Mat &m) {
 
 void LineMapping::Undistort(string &strSettingPath, vector<string> &vstrImageFilenames, string &imgDir) {
 
-	// If already undistorted, skip. 
-	string undistortPath = imgDir + "/undistort";
-	boost::filesystem::path dir(undistortPath);
-	if (boost::filesystem::create_directory(dir))
-	{
-		boost::filesystem::path dir_img(undistortPath + "/images");
-		boost::filesystem::create_directory(dir_img);
-		std::cerr << "Directory Created: " << undistortPath << std::endl;
-	}
-	else {
-		cout << "Already Undistortion done." << endl;
-		return;
-	}
-
 	// Load camera parameters from settings file
 	cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
 	float fx = fSettings["Camera.fx"];
@@ -58,6 +44,24 @@ void LineMapping::Undistort(string &strSettingPath, vector<string> &vstrImageFil
 		DistCoef.at<float>(4) = k3;
 	}
 
+	// Simply compute image boundary using first image. 
+	Mat im1st = cv::imread(imgDir + "/" + vstrImageFilenames[0], CV_LOAD_IMAGE_UNCHANGED);
+	ComputeImageBounds(K, DistCoef, im1st);
+
+	// If already undistorted, skip. 
+	string undistortPath = imgDir + "/undistort";
+	boost::filesystem::path dir(undistortPath);
+	if (boost::filesystem::create_directory(dir))
+	{
+		boost::filesystem::path dir_img(undistortPath + "/images");
+		boost::filesystem::create_directory(dir_img);
+		std::cerr << "Directory Created: " << undistortPath << std::endl;
+	}
+	else {
+		cout << "Already Undistortion done." << endl;
+		return;
+	}
+
 	int nImages = vstrImageFilenames.size();
 
 	for (int i = 0; i < nImages; i++) {
@@ -76,6 +80,121 @@ void LineMapping::Undistort(string &strSettingPath, vector<string> &vstrImageFil
 	boost::filesystem::copy_file(keyframeInfo, copiedPath, boost::filesystem::copy_option::overwrite_if_exists);
 
 	cout << "Undistortion done." << endl;
+}
+
+void LineMapping::ComputeImageBounds(const cv::Mat &K,const cv::Mat &distCoef, cv::Mat &im)
+{
+	if (distCoef.at<float>(0) != 0.0)
+	{
+		cv::Mat mat(4, 2, CV_32F);
+		mat.at<float>(0, 0) = 0.0; mat.at<float>(0, 1) = 0.0;
+		mat.at<float>(1, 0) = im.cols; mat.at<float>(1, 1) = 0.0;
+		mat.at<float>(2, 0) = 0.0; mat.at<float>(2, 1) = im.rows;
+		mat.at<float>(3, 0) = im.cols; mat.at<float>(3, 1) = im.rows;
+
+		// Undistort corners
+		mat = mat.reshape(2);
+		cv::undistortPoints(mat, mat, K, distCoef, cv::Mat(), K);
+		mat = mat.reshape(1);
+
+		mnMinX = min(mat.at<float>(0, 0), mat.at<float>(2, 0));
+		mnMaxX = max(mat.at<float>(1, 0), mat.at<float>(3, 0));
+		mnMinY = min(mat.at<float>(0, 1), mat.at<float>(1, 1));
+		mnMaxY = max(mat.at<float>(2, 1), mat.at<float>(3, 1));
+
+	}
+	else
+	{
+		mnMinX = 0.0f;
+		mnMaxX = im.cols;
+		mnMinY = 0.0f;
+		mnMaxY = im.rows;
+	}
+}
+
+void LineMapping::FilterBoundaryLines(cv::Mat &lines) {
+	Mat initLines = lines;
+	int nRows = initLines.rows;
+	int nCols = initLines.cols;
+	if (nRows < 1)
+		return;
+
+	vector<int> vbadIdx;
+
+	for (int i = 0; i < nRows; i++) {
+
+		float spt_x = lines.at<float>(i, 0);
+		float spt_y = lines.at<float>(i, 1);
+		float ept_x = lines.at<float>(i, 2);
+		float ept_y = lines.at<float>(i, 3);
+
+		if ((spt_x > mnMinX) && (spt_x < mnMaxX)) {
+			if ((spt_y > mnMinY) && (spt_y < mnMaxY))
+				continue;
+		}
+		
+		if ((ept_x > mnMinX) && (ept_x < mnMaxX)) {
+			if ((ept_y > mnMinY) && (ept_y < mnMaxY))
+				continue;
+		}
+		
+		vbadIdx.push_back(i);
+	}
+
+	// Remove rows using bad flags. 
+	int nbadLines = vbadIdx.size();
+	Mat filteredLines(nRows- nbadLines, nCols, CV_32F);
+	int nFilteredCols = nRows - nbadLines;
+	if (nbadLines < 1)
+		return;
+	
+	if (nbadLines == 1) {
+		if (vbadIdx[0] > 0)
+		{
+			cv::Rect rect(0, 0, nCols, vbadIdx[0]);
+			initLines(rect).copyTo(filteredLines(rect));
+		}
+		if (vbadIdx[0] < nRows - 1)
+		{
+			cv::Rect rect1(0, vbadIdx[0] + 1, nCols, nRows - vbadIdx[0] - 1);
+			cv::Rect rect2(0, vbadIdx[0], nCols, nRows - vbadIdx[0] - 1);
+			initLines(rect1).copyTo(filteredLines(rect2));
+		}
+	}
+
+	else {
+		for (int j = 0; j < nbadLines; j++) {
+
+			if (j < nbadLines - 1)
+				if (vbadIdx[j + 1] - vbadIdx[j] == 1)
+					continue;
+
+			if (j == 0) {
+				if (vbadIdx[j] == 0) {
+					cv::Rect rect1(0, 1, nCols, vbadIdx[1] - 1);
+					cv::Rect rect2(0, 0, nCols, vbadIdx[1] - 1);
+					initLines(rect1).copyTo(filteredLines(rect2));
+				}
+				else {
+					cv::Rect rect(0, 0, nCols, vbadIdx[0]);
+					initLines(rect).copyTo(filteredLines(rect));
+				}
+			}
+			else if (j == nbadLines - 1) {
+				if (vbadIdx[j] != nRows - 1) {
+					cv::Rect rect1(0, vbadIdx[j] + 1, nCols, nRows - (vbadIdx[j]) - 1);
+					cv::Rect rect2(0, vbadIdx[j] - j, nCols, nRows - (vbadIdx[j]) - 1);
+					initLines(rect1).copyTo(filteredLines(rect2));
+				}
+			}
+			else {
+				cv::Rect rect1(0, vbadIdx[j] + 1, nCols, vbadIdx[j + 1] - (vbadIdx[j]) - 1);
+				cv::Rect rect2(0, vbadIdx[j] - j, nCols, vbadIdx[j + 1] - (vbadIdx[j]) - 1);
+				initLines(rect1).copyTo(filteredLines(rect2));
+			}
+		}
+	}
+	filteredLines.copyTo(lines);
 }
 
 float LineMapping::MagMat(cv::Mat &m) {
@@ -586,13 +705,13 @@ pair<float,int> LineMapping::ComputeModelScore(const Mat &tmpPlucker, const Mat 
 		Mat Ocw = pTmpKF->GetCameraCenter();
 		Mat Rcw = pTmpKF->GetRotation();
 		Mat t = pTmpKF->GetTranslation();
-		Mat Twc1 = Tcw.inv();
+		Mat Twc = Tcw.inv();
 
 		Mat n_c = Rcw * n_w + (SkewSymMat(t)*Rcw) * d_w;
 		Mat projectedL2d = lK * n_c;
 
 		float len = sqrt(projectedL2d.at<float>(0)*projectedL2d.at<float>(0) + projectedL2d.at<float>(1)*projectedL2d.at<float>(1));
-		float tmpE = abs(spt.dot(projectedL2d) / len + ept.dot(projectedL2d) / len);
+		float tmpE = abs(spt.dot(projectedL2d) / len) + abs(ept.dot(projectedL2d) / len);
 		
 		if (abs(tmpE) > th) {
 			inlierIndex[pTmpKF] = false;
@@ -609,12 +728,88 @@ pair<float,int> LineMapping::ComputeModelScore(const Mat &tmpPlucker, const Mat 
 }
 
 
+void LineMapping::TestVisualization(vector<ORB_SLAM2::KeyFrame*> vpKFS, string &imgDir, vector<string> &vstrImageFilenames){
+	KeyFrame *pKF1st = *(vpKFS.begin());
+	Mat K = pKF1st->mK;
+	float fx = K.at<float>(0, 0);
+	float fy = K.at<float>(1, 1);
+	float cx = K.at<float>(0, 2);
+	float cy = K.at<float>(1, 2);
+
+	cv::Mat lK = cv::Mat::zeros(3, 3, CV_32FC1);
+	lK.at<float>(0, 0) = fy;
+	lK.at<float>(1, 1) = fx;
+	lK.at<float>(2, 0) = -fy*cx;
+	lK.at<float>(2, 1) = -fx*cy;
+	lK.at<float>(2, 2) = fx*fy;
+
+	for (vector<ORB_SLAM2::KeyFrame*>::iterator vit = vpKFS.begin(), vend = vpKFS.end(); vit != vend; vit++) {
+		KeyFrame *pKF = (*vit);
+		vector<Line3d*> vline3ds = pKF->Get3DLines();
+		string imgName = imgDir + "/" + vstrImageFilenames[pKF->mnFrameId];
+
+		Mat Tcw = pKF->GetPose();
+		Mat Ocw = pKF->GetCameraCenter();
+		Mat Rcw = pKF->GetRotation();
+		Mat t = pKF->GetTranslation();
+		Mat Twc = Tcw.inv();
+		
+		for (vector<Line3d*>::iterator l3dit = vline3ds.begin(), l3dend = vline3ds.end(); l3dit!= l3dend; l3dit++) {
+			Line3d *tmpLine3d = (*l3dit);
+			if (!tmpLine3d)
+				continue;
+			int n2dLineIdx = tmpLine3d->GetIndexInKeyFrame(pKF);
+			if (n2dLineIdx < 0)
+				continue;
+			
+			Mat correct2Dline = pKF->Get2DLine(n2dLineIdx);
+
+			Mat tmpPlucker = tmpLine3d->GetPluckerWorld();
+			Mat n_w = tmpPlucker.rowRange(0, 3);
+			Mat d_w = tmpPlucker.rowRange(3, 6);
+			Mat n_c = Rcw * n_w + (SkewSymMat(t)*Rcw) * d_w;
+			Mat projectedL2d = lK * n_c;
+
+			Mat endpts = tmpLine3d->GetEndPts();
+			Mat spt = endpts.row(0);
+			Mat ept = endpts.row(1);
+
+			float l1 = projectedL2d.at<float>(0);
+			float l2 = projectedL2d.at<float>(1);
+			float l3 = projectedL2d.at<float>(2);
+
+			Mat im = imread(imgName);
+
+
+			Mat left_end = (Mat_<float>(2, 1, CV_32F) << 0, -l3 / l2);
+			Mat right_end = (Mat_<float>(2, 1, CV_32F) << im.cols, -(l1 * im.cols + l3) / l2);
+
+
+			srand(time(NULL));
+			int rand1 = rand() % (255 + 1);
+			int rand2 = rand() % (255 + 1);
+			int rand3 = rand() % (255 + 1);
+			line(im, Point(left_end.at<float>(0), left_end.at<float>(1)), Point(right_end.at<float>(0), right_end.at<float>(1)), Scalar(0, 0, 255), 2);
+			line(im, Point(correct2Dline.at<float>(0), correct2Dline.at<float>(1)), Point(correct2Dline.at<float>(2), correct2Dline.at<float>(3)), Scalar(0, 255, 0), 2);
+			/*line(im, Point(left_end.at<float>(0), left_end.at<float>(1)), Point(right_end.at<float>(0), right_end.at<float>(1)), Scalar(rand1, rand2, rand3), 2);
+			line(im, Point(correct2Dline.at<float>(1), correct2Dline.at<float>(0)), Point(correct2Dline.at<float>(3), correct2Dline.at<float>(2)), Scalar(rand1, rand2, rand3), 2);*/
+			imshow("image", im);
+			waitKey(0);
+
+			cout << "left_end" << left_end << endl;
+			cout << "right_end" << right_end << endl;
+			cout << "correct2Dline" << correct2Dline << endl;
+			cout << endl;
+		}
+	}
+}
+
 int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrImageFilenames, string &writeKFinfo, string &imgDir) {
 
 	ORB_SLAM2::Map* _mpMap = SLAM.GetMap();
 	vector<ORB_SLAM2::KeyFrame*> vpKFS = _mpMap->GetAllKeyFrames();
 
-	bool isLineRegisterInitDone = true;
+	bool isLineRegisterInitDone = false;
 	bool isLineRANSACInitDone = false;
 	bool isLSD = false;
 	bool isProvidedLines = true;
@@ -662,6 +857,10 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 				char* imgName = &strImgName[0];
 				lineMatching->detectLine(imgName, lines, 0);
 			}
+			
+			//Remove lines extracted on the boundary(caused by undistortion.)
+
+			FilterBoundaryLines(lines);
 			pCurrentKF->SetExtracted2DLines(lines);
 
 		}
@@ -723,17 +922,17 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 				totalNlines += nCreatedLines;
 				cout << "************* " << nCreatedLines << " lines have newly created.. || Total created lines so far : " << totalNlines << " *************\n" << endl;
 
-				vector<Line3d*> lines = pTmpKF->Get3DLines();
-				for (vector<ORB_SLAM2::Line3d*>::iterator vit = lines.begin(), vend = lines.end(); vit != vend; vit++) {
-					//Vertex. 
-					Line3d* pLine = *vit;
-					if (!pLine)
-						continue;
-					if (pLine->GetNumObservations() < 3)
-						continue;
-					ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
-					pLine->UpdateEndpts();
-				}
+				//vector<Line3d*> lines = pTmpKF->Get3DLines();
+				//for (vector<ORB_SLAM2::Line3d*>::iterator vit = lines.begin(), vend = lines.end(); vit != vend; vit++) {
+				//	//Vertex. 
+				//	Line3d* pLine = *vit;
+				//	if (!pLine)
+				//		continue;
+				//	if (pLine->GetNumObservations() < 3)
+				//		continue;
+				//	ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
+				//	pLine->UpdateEndpts();
+				//}
 
 			}
 			vDoneIdx.push_back(pCurrentKF->mnFrameId);
@@ -788,8 +987,10 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	SLAM.SaveMap(save_mode);
 
 	cout << "Wait for key.... " << endl;
-
 	std::cin >> wait;
+
+	// Test with visualization by projection on the images. 
+	TestVisualization(vpKFS, imgDir, vstrImageFilenames);
 
 
 

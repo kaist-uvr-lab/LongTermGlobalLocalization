@@ -133,10 +133,11 @@ int main(int argc, char **argv)
 	// If we need undistorted images, perform undistortion. 
 	//Undistort(string(argv[2]), vstrImageFilenames, imgDir);
 	
-	Undistort(string(argv[2]), vstrImageFilenames, imgDir);
+	//Undistort(string(argv[2]), vstrImageFilenames, imgDir);
 
 	if (currentMode == OffLine) {
 		LineMapping LR = LineMapping();
+		LR.Undistort(string(argv[2]), vstrImageFilenames, imgDir);
 		LR.LineRegistration(SLAM, vstrImageFilenames, writeKFinfo, imgDir + "/undistort");
 
 		// Stop all threads
