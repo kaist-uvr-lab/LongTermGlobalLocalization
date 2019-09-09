@@ -811,7 +811,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 
 	bool isLineRegisterInitDone = false;
 	bool isLineRANSACInitDone = false;
-	bool isLSD = false;
+	bool isLSD = true;
 	bool isProvidedLines = true;
 	bool isPrecomputedF = true;
 
@@ -877,7 +877,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			cout << count << "/" << vpKFS.size() << "KeyFrames has done. " << endl;
 			count++;
 
-			//if (pCurrentKF->mnFrameId != 714) {
+			//if (pCurrentKF->mnFrameId != 176) {
 			//	continue;
 			//}
 
@@ -916,23 +916,23 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 					lineMatching->setFmat(Fmat);
 				pair<Mat*, Mat*> mLines = lineMatching->lsm();
 
-				//int nCreatedLines = TwoViewTriangulation(mLines, K, invK, pCurrentKF, pTmpKF, _mpMap);
-				int nCreatedLines = CollectObservations(mLines, K, invK, pCurrentKF, pTmpKF, _mpMap);
+				int nCreatedLines = TwoViewTriangulation(mLines, K, invK, pCurrentKF, pTmpKF, _mpMap);
+				//int nCreatedLines = CollectObservations(mLines, K, invK, pCurrentKF, pTmpKF, _mpMap);
 
 				totalNlines += nCreatedLines;
 				cout << "************* " << nCreatedLines << " lines have newly created.. || Total created lines so far : " << totalNlines << " *************\n" << endl;
 
-				//vector<Line3d*> lines = pTmpKF->Get3DLines();
-				//for (vector<ORB_SLAM2::Line3d*>::iterator vit = lines.begin(), vend = lines.end(); vit != vend; vit++) {
-				//	//Vertex. 
-				//	Line3d* pLine = *vit;
-				//	if (!pLine)
-				//		continue;
-				//	if (pLine->GetNumObservations() < 3)
-				//		continue;
-				//	ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
-				//	pLine->UpdateEndpts();
-				//}
+				vector<Line3d*> lines = pTmpKF->Get3DLines();
+				for (vector<ORB_SLAM2::Line3d*>::iterator vit = lines.begin(), vend = lines.end(); vit != vend; vit++) {
+					//Vertex. 
+					Line3d* pLine = *vit;
+					if (!pLine)
+						continue;
+					if (pLine->GetNumObservations() < 3)
+						continue;
+					//ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
+					pLine->UpdateEndpts();
+				}
 
 			}
 			vDoneIdx.push_back(pCurrentKF->mnFrameId);
@@ -949,7 +949,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	cout << "----Initializing lines via RANSAC.. ----" << endl;
 	int save_mode = 0;
 	if (!isLineRANSACInitDone) {
-		InitializeLine3dRANSAC(vpKFS, _mpMap);
+		//InitializeLine3dRANSAC(vpKFS, _mpMap);
 
 		// Save the map before optimization. 
 		save_mode = 1; // SAVE_MODE : ONLY_MAP(0), LINE_MAP_NOT_OPT(1), LINE_MAP_OPT(2)

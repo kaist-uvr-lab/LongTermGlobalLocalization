@@ -84,13 +84,13 @@ namespace ORB_SLAM2 {
 		// Update Endpts
 		/*cv::Mat newEndpt1 = tmpAllEndpts.row(0);
 		cv::Mat newEndpt2 = tmpAllEndpts.row(1);*/
-		//cv::Mat newEndpt1 = tmpAllEndpts.row(sortedIdx.at<int>(0));
-		//cv::Mat newEndpt2 = tmpAllEndpts.row(sortedIdx.at<int>(sortedIdx.rows - 1));
-		int quarter = (sortedIdx.rows) / 4;
-		int idx1 = quarter;
-		int idx2 = (sortedIdx.rows-1) - quarter;
-		cv::Mat newEndpt1 = tmpAllEndpts.row(sortedIdx.at<int>(idx1));
-		cv::Mat newEndpt2 = tmpAllEndpts.row(sortedIdx.at<int>(idx2));
+		cv::Mat newEndpt1 = tmpAllEndpts.row(sortedIdx.at<int>(0));
+		cv::Mat newEndpt2 = tmpAllEndpts.row(sortedIdx.at<int>(sortedIdx.rows - 1));
+		//int quarter = (sortedIdx.rows) / 4;
+		//int idx1 = quarter;
+		//int idx2 = (sortedIdx.rows-1) - quarter;
+		//cv::Mat newEndpt1 = tmpAllEndpts.row(sortedIdx.at<int>(idx1));
+		//cv::Mat newEndpt2 = tmpAllEndpts.row(sortedIdx.at<int>(idx2));
 		newEndpt1.copyTo(mEndPts.row(0).colRange(0, 3));
 		newEndpt2.copyTo(mEndPts.row(1).colRange(0, 3));
 	}

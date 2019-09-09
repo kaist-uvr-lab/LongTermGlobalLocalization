@@ -247,6 +247,9 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 		topoFilter(vstrFanMatch, vstrPointMatch); 		
 		//cout<<"LJL matches filtered by topological constraint: " << vstrFanMatch.size()<<endl;
 		fanMatch2LineMatch(vstrFanMatch, vstrLineMatch);
+
+		if (vstrLineMatch.size() == 0)
+			return;
 		uniqueLineMatch(vstrLineMatch, vtmp);				
 		//cout<<"Line matches filtered by topological constraint: " << vstrLineMatch.size()<<endl;	
 		updatePointMatchFromFanMatches();
@@ -258,7 +261,11 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 		// waitKey();
 
 		preNum = curNum;	
- 		addFansMatch(desDistThr, fDistThr);
+
+		if (vstrFanMatch.size() < 5)
+			return; // If below 4, it will lead to error in function addFansMatch. 
+ 		
+		addFansMatch(desDistThr, fDistThr);
 
 		//cout<<"LJL matches after propagation: " << vstrFanMatch.size()<<endl;
  		updatePointMatchFromFanMatches();		
@@ -277,6 +284,12 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 		//cout<<"\n";
 	}
 	
+	// If not enough matches, pass it. 
+	if (vstrPointMatch.size() < 5 || vstrLineMatch.size() < 5) {
+		cout << "Not enough matches are generated. Pass.. " << endl;
+		return;
+	}
+
 	if (isVerbose) plotPointMatches(colorImg1.clone(), colorImg2.clone(), vstrPointMatch, "Point matches after propagation");
 	if (isVerbose) plotLineMatches(colorImg1.clone(), colorImg2.clone(), vstrLineMatch, "Line matches after propagation");
 
