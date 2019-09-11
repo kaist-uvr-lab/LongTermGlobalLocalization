@@ -96,19 +96,18 @@ namespace ORB_SLAM2{
 			e->setRobustKernel(rk);
 			
 			e->spt << spt.at<float>(0), spt.at<float>(1), spt.at<float>(2);
-			e->spt << spt.at<float>(0), spt.at<float>(1), spt.at<float>(2);
-
-			// Missing assignment for e->ept
 			e->ept << ept.at<float>(0), ept.at<float>(1), ept.at<float>(2);
-			e->ept << ept.at<float>(0), ept.at<float>(1), ept.at<float>(2);
-
 
 			//e->T = Eigen::Matrix<double, 6, 6>(T.data);
 
-			float fx = pKF->fx;
-			float fy = pKF->fy;
-			float cx = pKF->cx;
-			float cy = pKF->cy;
+			//float fx = pKF->fx;
+			//float fy = pKF->fy;
+			//float cx = pKF->cx;
+			//float cy = pKF->cy;
+			float fx = K.at<float>(0, 0);
+			float fy = K.at<float>(1, 1);
+			float cx = K.at<float>(0, 2);
+			float cy = K.at<float>(1, 2);
 			cv::Mat eK = cv::Mat::zeros(3, 3, CV_32FC1);
 			eK.at<float>(0, 0) = fy;
 			eK.at<float>(1, 1) = fx;
@@ -142,24 +141,24 @@ namespace ORB_SLAM2{
 			//nBad = 0;
 			optimizer.initializeOptimization(0);
 			
-			//std::cout << "before starting optimize" << std::endl;
-			//for (size_t i = 0, iend = vpEdgesLineOptimization.size(); i < iend; i++)
-			//{
+			std::cout << "before starting optimize" << std::endl;
+			for (size_t i = 0, iend = vpEdgesLineOptimization.size(); i < iend; i++)
+			{
 
-			//	g2o::EdgeLineOptimization* e = vpEdgesLineOptimization[i];
-			//	float chi2 = e->chi2();
-			//	std::cout << "iter=" << it << "err::" << chi2 << std::endl;
-			//}
-			//
+				g2o::EdgeLineOptimization* e = vpEdgesLineOptimization[i];
+				float chi2 = e->chi2();
+				std::cout << "iter=" << it << "err::" << chi2 << std::endl;
+			}
+			
 			optimizer.optimize(its[it]);
 
-			//for (size_t i = 0, iend = vpEdgesLineOptimization.size(); i < iend; i++)
-			//{
-			//	
-			//	g2o::EdgeLineOptimization* e = vpEdgesLineOptimization[i];
-			//	float chi2 = e->chi2();
-			//	std::cout <<"iter="<<it<< "err::" << chi2 << std::endl;
-			//}
+			for (size_t i = 0, iend = vpEdgesLineOptimization.size(); i < iend; i++)
+			{
+				
+				g2o::EdgeLineOptimization* e = vpEdgesLineOptimization[i];
+				float chi2 = e->chi2();
+				std::cout <<"iter="<<it<< "err::" << chi2 << std::endl;
+			}
 			
 			//g2o::LineVertex* vRecover = static_cast<g2o::LineVertex*>(optimizer.vertex(0));
 			//cv::Mat Lw;

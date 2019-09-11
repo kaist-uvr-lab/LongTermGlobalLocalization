@@ -134,6 +134,7 @@ public:
 
 	//Added 
 	Map* GetMap();
+	KeyFrameDatabase* GetKeyFrameDatabase() { return mpKeyFrameDatabase; }
 	// Save functions
 	void SaveMap(int save_mode);
 

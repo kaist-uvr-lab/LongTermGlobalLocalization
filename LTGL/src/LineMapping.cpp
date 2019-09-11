@@ -48,6 +48,12 @@ void LineMapping::Undistort(string &strSettingPath, vector<string> &vstrImageFil
 	Mat im1st = cv::imread(imgDir + "/" + vstrImageFilenames[0], CV_LOAD_IMAGE_UNCHANGED);
 	ComputeImageBounds(K, DistCoef, im1st);
 
+	//// copy Keyframe infos. to newly created directory. 
+	//string keyframeInfo = imgDir + "/KFinfo.txt";
+	//string undistortPath = imgDir + "/undistort";
+	//string copiedPath = undistortPath + "/KFinfo.txt";
+	//boost::filesystem::copy_file(keyframeInfo, copiedPath, boost::filesystem::copy_option::overwrite_if_exists);
+
 	// If already undistorted, skip. 
 	string undistortPath = imgDir + "/undistort";
 	boost::filesystem::path dir(undistortPath);
@@ -74,11 +80,6 @@ void LineMapping::Undistort(string &strSettingPath, vector<string> &vstrImageFil
 		cv::imwrite(outputName, undistort);
 	}
 
-	// copy Keyframe infos. to newly created directory. 
-	string keyframeInfo = imgDir + "KFinfo.txt";
-	string copiedPath = undistortPath + "KFinfo.txt";
-	boost::filesystem::copy_file(keyframeInfo, copiedPath, boost::filesystem::copy_option::overwrite_if_exists);
-
 	cout << "Undistortion done." << endl;
 }
 
@@ -97,10 +98,12 @@ void LineMapping::ComputeImageBounds(const cv::Mat &K,const cv::Mat &distCoef, c
 		cv::undistortPoints(mat, mat, K, distCoef, cv::Mat(), K);
 		mat = mat.reshape(1);
 
-		mnMinX = min(mat.at<float>(0, 0), mat.at<float>(2, 0));
-		mnMaxX = max(mat.at<float>(1, 0), mat.at<float>(3, 0));
-		mnMinY = min(mat.at<float>(0, 1), mat.at<float>(1, 1));
-		mnMaxY = max(mat.at<float>(2, 1), mat.at<float>(3, 1));
+		float buff = 3.0;
+
+		mnMinX = min(mat.at<float>(0, 0), mat.at<float>(2, 0)) + buff;
+		mnMaxX = max(mat.at<float>(1, 0), mat.at<float>(3, 0)) - buff;
+		mnMinY = min(mat.at<float>(0, 1), mat.at<float>(1, 1)) + buff;
+		mnMaxY = max(mat.at<float>(2, 1), mat.at<float>(3, 1)) - buff;
 
 	}
 	else
@@ -323,8 +326,6 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, const Mat &_K
 		plane2.at<float>(3) = -normalW2.dot(Ocw2);
 
 		// Triangulate only if we have enough parallax.
-		float test1 = (Rcw1.t() * normPtS1).dot(normalW2);
-		float depthTest1 = _pKF1->ComputeSceneMedianDepth(2);
 		float angle = acos(normalW1.dot(normalW2) / (MagMat(normalW1)*MagMat(normalW2))) * 180 / 3.141592;
 		if (abs(angle) < 0.5)
 			continue;
@@ -342,8 +343,6 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, const Mat &_K
 		n_vector.copyTo(triangulated_line.rowRange(0, 3));
 		d_vector.copyTo(triangulated_line.rowRange(3, 6));
 
-		if (isnan(n_vector.at<float>(0)) || isnan(n_vector.at<float>(1)) || isnan(n_vector.at<float>(2)))
-			int d = 1;
 		float depthS1 = ((Ocw2 - Ocw1).dot(normalW2)) / ((Rcw1.t() * normPtS1).dot(normalW2));
 		float depthE1 = ((Ocw2 - Ocw1).dot(normalW2)) / ((Rcw1.t() * normPtE1).dot(normalW2));
 		float depthS2 = ((Ocw1 - Ocw2).dot(normalW1)) / ((Rcw2.t() * normPtS2).dot(normalW1));
@@ -498,7 +497,7 @@ void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap){
 			}
 
 
-			float th = sqrt(5.994) * 2;
+			float th = sqrt(5.994) * 2 * 2;
 			//for (int n1 = 0; n1 < min(nObs, 5) - 1; n1++) {
 			//	for (int n2 = n1 + 1; n2 < min(nObs, 5); n2++) {
 			for (int n1 = 0; n1 < nObs - 1; n1++) {
@@ -605,9 +604,6 @@ bool LineMapping::InitializeLineParam(KeyFrame *_pKF1, KeyFrame *_pKF2, const Ma
 	normalW2.rowRange(0, 3).copyTo(plane2.rowRange(0, 3));
 	plane2.at<float>(3) = -normalW2.dot(Ocw2);
 
-	// Triangulate only if we have enough parallax.
-	float test1 = (Rcw1.t() * normPtS1).dot(normalW2);
-	float depthTest1 = _pKF1->ComputeSceneMedianDepth(2);
 	float angle = acos(normalW1.dot(normalW2) / (MagMat(normalW1)*MagMat(normalW2))) * 180 / 3.141592;
 	if (abs(angle) < 0.5)
 		return false;
@@ -780,7 +776,6 @@ void LineMapping::TestVisualization(vector<ORB_SLAM2::KeyFrame*> vpKFS, string &
 
 			Mat im = imread(imgName);
 
-
 			Mat left_end = (Mat_<float>(2, 1, CV_32F) << 0, -l3 / l2);
 			Mat right_end = (Mat_<float>(2, 1, CV_32F) << im.cols, -(l1 * im.cols + l3) / l2);
 
@@ -809,9 +804,12 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	ORB_SLAM2::Map* _mpMap = SLAM.GetMap();
 	vector<ORB_SLAM2::KeyFrame*> vpKFS = _mpMap->GetAllKeyFrames();
 
-	bool isLineRegisterInitDone = false;
-	bool isLineRANSACInitDone = false;
+	// You may change it.
+	bool isLineRegisterInitDone = true;
+	bool isLineRANSACInitDone = true;
 	bool isLSD = true;
+
+	// Don't change. 
 	bool isProvidedLines = true;
 	bool isPrecomputedF = true;
 
@@ -824,7 +822,6 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		LSM* lineMatching = new LSM(isProvidedLines, isPrecomputedF);
 
 		// Get all of the ids of keyframes. 
-
 		for (vector<ORB_SLAM2::KeyFrame*>::iterator vit = vpKFS.begin(), vend = vpKFS.end(); vit != vend; vit++) {
 			vKFindices.push_back((*vit)->mnFrameId);
 			sort(vKFindices.begin(), vKFindices.end(), less<int>());
@@ -859,7 +856,6 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			}
 			
 			//Remove lines extracted on the boundary(caused by undistortion.)
-
 			FilterBoundaryLines(lines);
 			pCurrentKF->SetExtracted2DLines(lines);
 
@@ -877,12 +873,18 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			cout << count << "/" << vpKFS.size() << "KeyFrames has done. " << endl;
 			count++;
 
-			//if (pCurrentKF->mnFrameId != 176) {
+			//if (pCurrentKF->mnFrameId != 2) {
 			//	continue;
 			//}
 
 			// Perform triangulation only for co-visible keyframes. 
 			vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(15);
+
+			// If covisibility graph is empty, do exhaustive search.
+			if (vCovisibleKFs.empty()) {
+				vCovisibleKFs.resize(vpKFS.size());
+				copy(vpKFS.begin(), vpKFS.end(), vCovisibleKFs.begin());
+			}
 
 			string strImgName1 = imgDir + "/" + vstrImageFilenames[pCurrentKF->mnFrameId];
 			char* imgName1 = &strImgName1[0];
@@ -949,7 +951,11 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	cout << "----Initializing lines via RANSAC.. ----" << endl;
 	int save_mode = 0;
 	if (!isLineRANSACInitDone) {
-		//InitializeLine3dRANSAC(vpKFS, _mpMap);
+		// Save the map before optimization. 
+		save_mode = 1; // SAVE_MODE : ONLY_MAP(0), LINE_MAP_NOT_OPT(1), LINE_MAP_OPT(2)
+		SLAM.SaveMap(save_mode);
+
+		InitializeLine3dRANSAC(vpKFS, _mpMap);
 
 		// Save the map before optimization. 
 		save_mode = 1; // SAVE_MODE : ONLY_MAP(0), LINE_MAP_NOT_OPT(1), LINE_MAP_OPT(2)
@@ -960,6 +966,10 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	cout << "----Optimizing of all the lines----" << endl;
 	cout << "----And Erasing unreliable lines, which include only two observations. -----" << endl;
 	int count2 = 0;
+
+	int numberLinesBefore = (_mpMap->GetLine3ds()).size();
+	cout << numberLinesBefore << " of lines were registered before optimization.. " << endl;
+
 	for (vector<ORB_SLAM2::KeyFrame*>::iterator vit = vpKFS.begin(), vend = vpKFS.end(); vit != vend; vit++) {
 		cout << "Optimization : " << count2 << " / " << vpKFS.size() << " KeyFrames has done. " << endl;
 		count2++;
@@ -973,6 +983,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			if (pLine->GetNumObservations() < 3) {
 				cout << "Erased!" << endl;
 				_mpMap->EraseLine3d(pLine);
+				pUnOptKF->EraseLine3dMatch(pLine);
 				continue;
 			}
 			ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
@@ -981,7 +992,9 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	}
 
 	cout << "----Optimization done." << endl;
-	
+	numberLinesBefore = (_mpMap->GetLine3ds()).size();
+	cout << numberLinesBefore << " of lines were left after optimization.. " << endl;
+
 	// Save the map after optimization. 
 	save_mode = 2; // SAVE_MODE : ONLY_MAP(0), LINE_MAP_NOT_OPT(1), LINE_MAP_OPT(2)
 	SLAM.SaveMap(save_mode);
@@ -991,32 +1004,6 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 
 	// Test with visualization by projection on the images. 
 	TestVisualization(vpKFS, imgDir, vstrImageFilenames);
-
-
-
-	//for (vector<ORB_SLAM2::KeyFrame*>::iterator vit = vpKFS.begin(), vend = vpKFS.end(); vit != vend; vit++) {
-	//	cout << "Optimization : " << count2 << " / " << vpKFS.size() << " KeyFrames has done. " << endl;
-	//	count2++;
-
-	//	KeyFrame* pUnOptKF = (*vit);
-	//	vector<Line3d*> lines = pUnOptKF->Get3DLines();
-	//	for (vector<ORB_SLAM2::Line3d*>::iterator vit = lines.begin(), vend = lines.end(); vit != vend; vit++) {
-	//		//Vertex. 
-	//		Line3d* pLine = *vit;
-	//		if (!pLine)
-	//			continue;
-	//		if (pLine->GetNumObservations() < 3)
-	//			continue;
-	//		ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
-	//		pLine->UpdateEndpts();
-	//	}
-	//}
-
-
-
-
-	/****************To do**************************************************/
-
 
 	return 0;
 }

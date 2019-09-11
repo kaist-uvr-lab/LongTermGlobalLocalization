@@ -35,7 +35,7 @@ using namespace std;
 void LoadImages(const string &strFile, vector<string> &vstrImageFilenames,
 	vector<double> &vTimestamps);
 
-int MapGeneration(ORB_SLAM2::System &SLAM, vector<string> &vstrImageFilenames, vector<double> &vTimestamps, string &imgPath, int iteration);
+int ComputePose(ORB_SLAM2::System &SLAM, vector<string> &vstrImageFilenames, vector<double> &vTimestamps, string &imgPath, int iteration);
 
 void Undistort(string &strSettingPath, vector<string> &vstrImageFilenames, string &imgDir) {
 
@@ -98,6 +98,487 @@ void Undistort(string &strSettingPath, vector<string> &vstrImageFilenames, strin
 	cout << "Undistortion done." << endl;
 }
 
+Mat ConvertQuatFromMat(const float Qw, const float Qx, const float Qy, const float Qz);
+
+int PoseFromColmap(ORB_SLAM2::System &SLAM, vector<string> &vstrImageFilenames, string &sSfMDir) {
+
+	//int nImages = vstrImageFilenames.size();
+	Map *_pMap = SLAM.GetMap();
+
+	cout << endl << "-------" << endl;
+	cout << "Loading camera poses from SfM (Colmap) ..." << endl;
+
+	// check if colmap directory exists
+	boost::filesystem::path sfm(sSfMDir);
+	if (!boost::filesystem::exists(sfm))
+	{
+		std::cerr << "Colmap result direcotry is not correct!" << std::endl;
+		return -1;
+	}
+
+	// check if all colmap results exist
+	boost::filesystem::path sfm_cameras(sSfMDir + "/cameras.txt");
+	boost::filesystem::path sfm_images(sSfMDir + "/images.txt");
+	boost::filesystem::path sfm_points3D(sSfMDir + "/points3D.txt");
+	if (!boost::filesystem::exists(sfm_cameras) || !boost::filesystem::exists(sfm_images) ||
+		!boost::filesystem::exists(sfm_points3D))
+	{
+		std::cerr << "At least one of the colmap result files does not exist in sfm folder: " << sfm << std::endl;
+		return -2;
+	}
+
+	// Read cameras.txt
+	// Here we assume only one common camera.
+	// Code from Line3D++.
+	std::ifstream cameraFile;
+	cameraFile.open(sfm_cameras.c_str());
+	std::string camerasLine;
+
+	Mat matK, matDistCoef;
+
+	while (std::getline(cameraFile, camerasLine))
+	{
+		// check first character for a comment (#)
+		if (camerasLine.substr(0, 1).compare("#") != 0)
+		{
+			std::stringstream cameras_stream(camerasLine);
+
+			unsigned int camID, width, height;
+			std::string model;
+
+			// parse essential data
+			cameras_stream >> camID >> model >> width >> height;
+
+			float fx, fy, cx, cy, k1, k2, k3, p1, p2;
+
+			// check camera model
+			if (model.compare("SIMPLE_PINHOLE") == 0)
+			{
+				// f,cx,cy
+				cameras_stream >> fx >> cx >> cy;
+				fy = fx;
+				k1 = 0; k2 = 0; k3 = 0;
+				p1 = 0; p2 = 0;
+			}
+			else if (model.compare("PINHOLE") == 0)
+			{
+				// fx,fy,cx,cy
+				cameras_stream >> fx >> fy >> cx >> cy;
+				k1 = 0; k2 = 0; k3 = 0;
+				p1 = 0; p2 = 0;
+			}
+			else if (model.compare("SIMPLE_RADIAL") == 0)
+			{
+				// f,cx,cy,k
+				cameras_stream >> fx >> cx >> cy >> k1;
+				fy = fx;
+				k2 = 0; k3 = 0;
+				p1 = 0; p2 = 0;
+			}
+			else if (model.compare("RADIAL") == 0)
+			{
+				// f,cx,cy,k1,k2
+				cameras_stream >> fx >> cx >> cy >> k1 >> k2;
+				fy = fx;
+				k3 = 0;
+				p1 = 0; p2 = 0;
+			}
+			else if (model.compare("OPENCV") == 0)
+			{
+				// fx,fy,cx,cy,k1,k2,p1,p2
+				cameras_stream >> fx >> fy >> cx >> cy >> k1 >> k2 >> p1 >> p2;
+				k3 = 0;
+			}
+			else if (model.compare("FULL_OPENCV") == 0)
+			{
+				// fx,fy,cx,cy,k1,k2,p1,p2,k3[,k4,k5,k6]
+				cameras_stream >> fx >> fy >> cx >> cy >> k1 >> k2 >> p1 >> p2 >> k3;
+			}
+			else
+			{
+				std::cerr << "camera model " << model << " unknown!" << std::endl;
+				std::cerr << "please specify its parameters in the main_colmap.cpp in order to proceed..." << std::endl;
+				return -3;
+			}
+
+			matK = (Mat_<float>(3, 3, CV_32F) << fx, 0, cx, 0, fy, cy, 0, 0, 1);
+			matDistCoef = (Mat_<float>(5, 1, CV_32F) << k1, k2, p1, p2, k3);
+
+			break;
+		}
+	}
+	cameraFile.close();
+
+	// Read images.txt
+	std::ifstream imageFile;
+	imageFile.open(sfm_images.c_str());
+	std::string images_line;
+
+	std::map<unsigned int, Eigen::Matrix3d> cams_R;
+	std::map<unsigned int, Eigen::Vector3d> cams_t;
+	std::map<unsigned int, Eigen::Vector3d> cams_C;
+	std::map<unsigned int, unsigned int> img2cam;
+	std::map<unsigned int, std::string> cams_images;
+	std::map<unsigned int, std::list<unsigned int> > cams_worldpoints;
+	std::map<unsigned int, Eigen::Vector3d> wps_coords;
+	std::vector<unsigned int> img_seq;
+	unsigned int imgID, camID;
+	Frame tmpF;
+	int nFrames = 0;
+
+	bool first_line = true;
+	while (std::getline(imageFile, images_line))
+	{
+		// check first character for a comment (#)
+		if (images_line.substr(0, 1).compare("#") != 0)
+		{
+			std::stringstream images_stream(images_line);
+			if (first_line)
+			{
+				// image data
+				float qw, qx, qy, qz, tx, ty, tz;
+				std::string img_name;
+
+				images_stream >> imgID >> qw >> qx >> qy >> qz >> tx >> ty >> tz >> camID >> img_name;
+
+				stringstream ss(img_name);
+				string frameID;
+				getline(ss, frameID, '.');
+				int nFrameID = atoi(frameID.c_str()) - 1;
+
+				// convert rotation
+				Mat Rcw = ConvertQuatFromMat(qw, qx, qy, qz);
+				Mat tcw = (Mat_<float>(3, 1, CV_32F) << tx, ty, tz);
+				Mat Ocw = -Rcw.t() * tcw;
+
+				tmpF.mK = matK;
+				tmpF.mDistCoef = matDistCoef;
+				tmpF.mnId = nFrameID;
+				tmpF.fx = matK.at<float>(0, 0);
+				tmpF.fy = matK.at<float>(1, 1);
+				tmpF.cx = matK.at<float>(0, 2);
+				tmpF.cy = matK.at<float>(1, 2);
+				tmpF.invfx = 1 / tmpF.fx;
+				tmpF.invfy = 1 / tmpF.fy;
+
+				// Set Frame Poses
+				Mat Tcw = Mat::eye(4, 4, CV_32F);
+				Rcw.copyTo(Tcw.rowRange(0, 3).colRange(0, 3));
+				tcw.copyTo(Tcw.rowRange(0, 3).col(3));
+				tmpF.SetPose(Tcw);
+				
+				// For serializing. 
+				tmpF.mDescriptors = Mat::zeros(1, 1, CV_32F);
+				
+				// For serializing. 
+				KeyFrame *pKF = new KeyFrame(tmpF, _pMap, SLAM.GetKeyFrameDatabase());
+				_pMap->AddKeyFrame(pKF);
+				pKF->mTcwGBA = Mat::zeros(4,4,CV_32F);
+				pKF->mTcwBefGBA = Mat::zeros(4, 4, CV_32F);
+				pKF->mTcp = Mat::zeros(4, 4, CV_32F);
+				first_line = false;
+				nFrames++;
+			}
+			else
+			{
+				// 2D points
+				double x, y;
+				std::string wpID;
+				std::list<unsigned int> wps;
+				bool process = true;
+
+				while (process)
+				{
+					wpID = "";
+					images_stream >> x >> y >> wpID;
+
+					if (wpID.length() > 0)
+					{
+						int wp = atoi(wpID.c_str());
+
+						if (wp >= 0)
+						{
+							wps.push_back(wp);
+							wps_coords[wp] = Eigen::Vector3d(0, 0, 0);
+						}
+					}
+					else
+					{
+						// end reached
+						process = false;
+					}
+				}
+				cams_worldpoints[imgID] = wps;
+				first_line = true;
+			}
+		}
+	}
+	imageFile.close();
+
+	//std::cout << "found " << cams_R.size() << " images and " << wps_coords.size() << " worldpoints in [images.txt]" << std::endl;
+	cout << "Total " << nFrames << " images have retrieved" << endl;
+
+
+	//	// Main loop
+	//	cv::Mat im;
+	//	while (iteration > 0) {
+	//		// Total number of images : iteration * (forward + backward)
+	//		// Backward process leads to runtime-error : to be fixed.
+	//
+	//		for (int ni = 0; ni < total_nimages; ni++)
+	//		{
+	//			int frameNum = 0;
+	//
+	//			if ((ni / nImages) % 2 == 0) { frameNum = (ni % nImages); }
+	//			else { frameNum = (nImages - 1) - (ni % nImages); }
+	//
+	//			cout << frameNum << " processing.." << endl;
+	//			// Read image from file
+	//			im = cv::imread(imgDir + "/" + vstrImageFilenames[frameNum], CV_LOAD_IMAGE_UNCHANGED);
+	//			double tframe = vTimestamps[frameNum];
+	//
+	//			if (im.empty())
+	//			{
+	//				cerr << endl << "Failed to load image at: "
+	//					<< imgDir << "/" << vstrImageFilenames[frameNum] << endl;
+	//				return 1;
+	//			}
+	//
+	//#ifdef COMPILEDWITHC11
+	//			std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+	//#else
+	//			std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
+	//#endif
+	//
+	//			// Pass the image to the SLAM system
+	//			SLAM.TrackMonocular(im, tframe);
+	//
+	//#ifdef COMPILEDWITHC11
+	//			std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+	//#else
+	//			std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
+	//#endif
+	//
+	//			double ttrack = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
+	//
+	//			vTimesTrack[ni] = ttrack;
+	//
+	//			//// Wait to load the next frame
+	//			//double T = 0;
+	//			//if (ni < total_nimages - 1)
+	//			//	T = vTimestamps[ni + 1] - tframe;
+	//			//else if (ni > 0)
+	//			//	T = tframe - vTimestamps[ni - 1];
+	//
+	//			// Wait to load the next frame
+	//			double T = 0;
+	//
+	//			if ((ni / nImages) % 2 == 0) {
+	//				if (ni < total_nimages - 1)
+	//					T = vTimestamps[frameNum + 1] - tframe;
+	//				else if (ni > 0)
+	//					T = tframe - vTimestamps[frameNum - 1];
+	//			}
+	//			else {
+	//				frameNum = (nImages - 1) - (ni % nImages);
+	//				if (frameNum > 0) {
+	//					T = tframe - vTimestamps[frameNum - 1];
+	//				}
+	//				else if (frameNum < nImages - 1)
+	//					T = tframe - vTimestamps[0];
+	//			}
+	//
+	//			if (ttrack < T)
+	//				std::this_thread::sleep_for(std::chrono::microseconds(static_cast<size_t>((T - ttrack)*1e6)));
+	//		}
+	//
+	//		iteration--;
+	//	}
+	// Stop all threads
+	SLAM.Shutdown(false);
+
+	//// Tracking time statistics
+	//sort(vTimesTrack.begin(), vTimesTrack.end());
+	//float totaltime = 0;
+	//for (int ni = 0; ni<nImages; ni++)
+	//{
+	//	totaltime += vTimesTrack[ni];
+	//}
+	//cout << "-------" << endl << endl;
+	//cout << "median tracking time: " << vTimesTrack[nImages / 2] << endl;
+	//cout << "mean tracking time: " << totaltime / nImages << endl;
+
+	// Save camera trajectory
+	SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
+
+	return 0;
+
+}
+
+Mat ConvertQuatFromMat(const float Qw, const float Qx, const float Qy, const float Qz) {
+	// Duplicated from Line3D++.
+
+	float n = Qw*Qw + Qx*Qx + Qy*Qy + Qz*Qz;
+
+	float s;
+	float epsilon = 1e-6;
+	if (fabs(n) < epsilon)
+		s = 0;
+	else
+		s = 2.0 / n;
+
+	float wx = s*Qw*Qx; float wy = s*Qw*Qy; float wz = s*Qw*Qz;
+	float xx = s*Qx*Qx; float xy = s*Qx*Qy; float xz = s*Qx*Qz;
+	float yy = s*Qy*Qy; float yz = s*Qy*Qz; float zz = s*Qz*Qz;
+
+	Mat R = (Mat_<float>(3, 3, CV_32F) << 1.0 - (yy + zz), xy - wz, xz + wy,
+		xy + wz, 1.0 - (xx + zz), yz - wx,
+		xz - wy, yz + wx, 1.0 - (xx + yy));
+	return R.clone();
+}
+
+void LoadImages(const string &strFile, vector<string> &vstrImageFilenames, vector<double> &vTimestamps)
+{
+	ifstream f;
+	f.open(strFile.c_str());
+	cout << "Loading images ..." << endl;
+
+	// skip first three lines
+	string s0;
+	getline(f, s0);
+	getline(f, s0);
+	getline(f, s0);
+
+	while (!f.eof())
+	{
+		string s;
+		getline(f, s);
+		if (!s.empty())
+		{
+			stringstream ss;
+			ss << s;
+			double t;
+			string sRGB;
+			ss >> t;
+			vTimestamps.push_back(t);
+			ss >> sRGB;
+			vstrImageFilenames.push_back(sRGB);
+		}
+	}
+}
+
+int ComputePose(ORB_SLAM2::System &SLAM, vector<string> &vstrImageFilenames, vector<double> &vTimestamps, string &imgDir, int iteration) {
+
+	int nImages = vstrImageFilenames.size();
+	int total_nimages = 1 * iteration * nImages;
+
+	// Vector for tracking time statistics
+	vector<float> vTimesTrack;
+	vTimesTrack.resize(total_nimages);
+
+	cout << endl << "-------" << endl;
+	cout << "Start processing sequence ..." << endl;
+	cout << "Images in the sequence: " << nImages << endl;
+	cout << "Total Iterations : " << iteration << endl << endl;
+
+	// Main loop
+	cv::Mat im;
+	while (iteration > 0) {
+		// Total number of images : iteration * (forward + backward)
+		// Backward process leads to runtime-error : to be fixed.
+
+		for (int ni = 0; ni < total_nimages; ni++)
+		{
+			if (ni > 200)
+				continue;
+			int frameNum = 0;
+
+			if ((ni / nImages) % 2 == 0) { frameNum = (ni % nImages); }
+			else { frameNum = (nImages - 1) - (ni % nImages); }
+
+			cout << frameNum << " processing.." << endl;
+			// Read image from file
+			im = cv::imread(imgDir + "/" + vstrImageFilenames[frameNum], CV_LOAD_IMAGE_UNCHANGED);
+			double tframe = vTimestamps[frameNum];
+
+			if (im.empty())
+			{
+				cerr << endl << "Failed to load image at: "
+					<< imgDir << "/" << vstrImageFilenames[frameNum] << endl;
+				return 1;
+			}
+
+#ifdef COMPILEDWITHC11
+			std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+#else
+			std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
+#endif
+
+			// Pass the image to the SLAM system
+			SLAM.TrackMonocular(im, tframe);
+
+#ifdef COMPILEDWITHC11
+			std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+#else
+			std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
+#endif
+
+			double ttrack = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
+
+			vTimesTrack[ni] = ttrack;
+
+			//// Wait to load the next frame
+			//double T = 0;
+			//if (ni < total_nimages - 1)
+			//	T = vTimestamps[ni + 1] - tframe;
+			//else if (ni > 0)
+			//	T = tframe - vTimestamps[ni - 1];
+
+			// Wait to load the next frame
+			double T = 0;
+
+			if ((ni / nImages) % 2 == 0) {
+				if (ni < total_nimages - 1)
+					T = vTimestamps[frameNum + 1] - tframe;
+				else if (ni > 0)
+					T = tframe - vTimestamps[frameNum - 1];
+			}
+			else {
+				frameNum = (nImages - 1) - (ni % nImages);
+				if (frameNum > 0) {
+					T = tframe - vTimestamps[frameNum - 1];
+				}
+				else if (frameNum < nImages - 1)
+					T = tframe - vTimestamps[0];
+			}
+
+			if (ttrack < T)
+				std::this_thread::sleep_for(std::chrono::microseconds(static_cast<size_t>((T - ttrack)*1e6)));
+		}
+
+		iteration--;
+	}
+	// Stop all threads
+	SLAM.Shutdown(false);
+
+	//// Tracking time statistics
+	//sort(vTimesTrack.begin(), vTimesTrack.end());
+	//float totaltime = 0;
+	//for (int ni = 0; ni<nImages; ni++)
+	//{
+	//	totaltime += vTimesTrack[ni];
+	//}
+	//cout << "-------" << endl << endl;
+	//cout << "median tracking time: " << vTimesTrack[nImages / 2] << endl;
+	//cout << "mean tracking time: " << totaltime / nImages << endl;
+
+	// Save camera trajectory
+	SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
+
+	return 0;
+
+}
+
 int main(int argc, char **argv)
 {
 	if (argc < 5)
@@ -116,7 +597,7 @@ int main(int argc, char **argv)
 	string writeKFinfo = imgDir + "/undistort/KFinfo.txt";
 	string lineDir = imgDir + "/results";
 
-	enum mode {OffLine, OnLine};
+	enum mode { OffLine, OnLine };
 	mode currentMode = OffLine;
 
 	int iteration = 1;
@@ -124,16 +605,16 @@ int main(int argc, char **argv)
 	ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, true, (bool)atoi(argv[4]));
 
 	// Generate Global Map using ORB-SLAM. 
-
-	bool isMapGeneration = atoi(argv[5]);
-	if ((isMapGeneration)) {
-		MapGeneration(SLAM, vstrImageFilenames, vTimestamps, imgDir, iteration);
+	bool isComputePose = atoi(argv[5]);
+	bool isColmap = atoi(argv[6]);
+	if (isComputePose) {
+		if (isColmap) {
+			string sSfMDir = string(argv[7]);
+			PoseFromColmap(SLAM, vstrImageFilenames, sSfMDir);
+		}
+		else
+			ComputePose(SLAM, vstrImageFilenames, vTimestamps, imgDir, iteration);
 	}
-
-	// If we need undistorted images, perform undistortion. 
-	//Undistort(string(argv[2]), vstrImageFilenames, imgDir);
-	
-	//Undistort(string(argv[2]), vstrImageFilenames, imgDir);
 
 	if (currentMode == OffLine) {
 		LineMapping LR = LineMapping();
@@ -164,7 +645,7 @@ int main(int argc, char **argv)
 		{
 			// Read image from file
 			im = cv::imread(vstrImageFilenames[ni], CV_LOAD_IMAGE_UNCHANGED);
-			
+
 			// Load extracted lines. 
 			string strLineName = imgDir + "/results/" + to_string(ni + 1) + "_lines.txt";
 			char* lineName = &strLineName[0];
@@ -212,127 +693,4 @@ int main(int argc, char **argv)
 	}
 
 	return 0;
-}
-
-
-void LoadImages(const string &strFile, vector<string> &vstrImageFilenames, vector<double> &vTimestamps)
-{
-	ifstream f;
-	f.open(strFile.c_str());
-	cout << "Loading images ..." << endl;
-
-	// skip first three lines
-	string s0;
-	getline(f, s0);
-	getline(f, s0);
-	getline(f, s0);
-
-	while (!f.eof())
-	{
-		string s;
-		getline(f, s);
-		if (!s.empty())
-		{
-			stringstream ss;
-			ss << s;
-			double t;
-			string sRGB;
-			ss >> t;
-			vTimestamps.push_back(t);
-			ss >> sRGB;
-			vstrImageFilenames.push_back(sRGB);
-		}
-	}
-}
-
-int MapGeneration(ORB_SLAM2::System &SLAM, vector<string> &vstrImageFilenames, vector<double> &vTimestamps, string &imgDir, int iteration) {
-
-	int nImages = vstrImageFilenames.size();
-
-	// Vector for tracking time statistics
-	vector<float> vTimesTrack;
-	vTimesTrack.resize(iteration * nImages);
-
-	cout << endl << "-------" << endl;
-	cout << "Start processing sequence ..." << endl;
-	cout << "Images in the sequence: " << nImages << endl;
-	cout << "Total Iterations : " << iteration << endl << endl;
-
-	// Main loop
-	cv::Mat im;
-	while (iteration > 0) {
-		// Total number of images : iteration * (forward + backward)
-		// Backward process leads to runtime-error : to be fixed.
-		int total_nimages = 1 * iteration * nImages;
-
-		for (int ni = 0; ni < total_nimages; ni++)
-		{
-			int frameNum = 0;
-
-			if ((ni / nImages) % 2 == 0) { frameNum = (ni % nImages); }
-			else { frameNum = (nImages - 1) - (ni % nImages); }
-
-			cout << frameNum << " processing.." << endl;
-			// Read image from file
-			im = cv::imread(imgDir + "/" + vstrImageFilenames[frameNum], CV_LOAD_IMAGE_UNCHANGED);
-			double tframe = vTimestamps[frameNum];
-
-			if (im.empty())
-			{
-				cerr << endl << "Failed to load image at: "
-					<< imgDir << "/" << vstrImageFilenames[frameNum] << endl;
-				return 1;
-			}
-
-#ifdef COMPILEDWITHC11
-			std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-#else
-			std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
-#endif
-
-			// Pass the image to the SLAM system
-			SLAM.TrackMonocular(im, tframe);
-
-#ifdef COMPILEDWITHC11
-			std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
-#else
-			std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
-#endif
-
-			double ttrack = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
-
-			vTimesTrack[ni] = ttrack;
-
-			// Wait to load the next frame
-			double T = 0;
-			if (ni < total_nimages - 1)
-				T = vTimestamps[ni + 1] - tframe;
-			else if (ni > 0)
-				T = tframe - vTimestamps[ni - 1];
-
-			if (ttrack < T)
-				std::this_thread::sleep_for(std::chrono::microseconds(static_cast<size_t>((T - ttrack)*1e6)));
-		}
-
-		iteration--;
-	}
-	// Stop all threads
-	SLAM.Shutdown(false);
-
-	// Tracking time statistics
-	sort(vTimesTrack.begin(), vTimesTrack.end());
-	float totaltime = 0;
-	for (int ni = 0; ni<nImages; ni++)
-	{
-		totaltime += vTimesTrack[ni];
-	}
-	cout << "-------" << endl << endl;
-	cout << "median tracking time: " << vTimesTrack[nImages / 2] << endl;
-	cout << "mean tracking time: " << totaltime / nImages << endl;
-
-	// Save camera trajectory
-	SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
-
-	return 0;
-
 }

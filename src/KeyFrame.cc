@@ -675,7 +675,7 @@ KeyFrame::KeyFrame():
     mnFrameId(0),  mTimeStamp(0.0), mnGridCols(FRAME_GRID_COLS), mnGridRows(FRAME_GRID_ROWS),
     mfGridElementWidthInv(0.0), mfGridElementHeightInv(0.0),
     mnTrackReferenceForFrame(0), mnFuseTargetForKF(0), mnBALocalForKF(0), mnBAFixedForKF(0),
-    mnLoopQuery(0), mnLoopWords(0), mnRelocQuery(0), mnRelocWords(0), mnBAGlobalForKF(0),
+	mnLoopQuery(0), mnLoopWords(0), mLoopScore(0), mnRelocQuery(0), mnRelocWords(0), mRelocScore(0), mnBAGlobalForKF(0),
     fx(0.0), fy(0.0), cx(0.0), cy(0.0), invfx(0.0), invfy(0.0),
     mbf(0.0), mb(0.0), mThDepth(0.0), N(0), mnScaleLevels(0), mfScaleFactor(0),
     mfLogScaleFactor(0.0),
