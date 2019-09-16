@@ -805,8 +805,8 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	vector<ORB_SLAM2::KeyFrame*> vpKFS = _mpMap->GetAllKeyFrames();
 
 	// You may change it.
-	bool isLineRegisterInitDone = true;
-	bool isLineRANSACInitDone = true;
+	bool isLineRegisterInitDone = false;
+	bool isLineRANSACInitDone = false;
 	bool isLSD = true;
 
 	// Don't change. 
@@ -980,7 +980,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			Line3d* pLine = *vit;
 			if (!pLine)
 				continue;
-			if (pLine->GetNumObservations() < 3) {
+			if (pLine->GetNumObservations() < 5) {
 				cout << "Erased!" << endl;
 				_mpMap->EraseLine3d(pLine);
 				pUnOptKF->EraseLine3dMatch(pLine);

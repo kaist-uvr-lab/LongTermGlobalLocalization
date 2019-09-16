@@ -85,11 +85,19 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 	{
 		initialize_selfGenJunctions(img1, strline1, nline1,  nodes1, vstrFanSection1);
 		initialize_selfGenJunctions(img2, strline2, nline2,  nodes2, vstrFanSection2);	
-	}	
-	//cout<<"LJLs  constructed in the first image: " << vstrFanSection1.size()<<endl;
-	//cout<<"LJLs constructed in the second image: " << vstrFanSection2.size()<<endl;
+	}
 
-	//cout<<"Describing and matching LJLs (may last for a while)..." << endl;
+	mtimer.Stop();
+	mtimer.PrintElapsedTimeMsg(msg);
+	float t_1 = mtimer.GetElapsedSeconds();
+
+	printf("\nElapsed time for the Generating LJL : %s.\n", msg);
+
+	mtimer.Start();
+
+	cout<<"LJLs  constructed in the first image: " << vstrFanSection1.size()<<endl;
+	cout<<"LJLs constructed in the second image: " << vstrFanSection2.size()<<endl;
+	cout<<"Describing and matching LJLs (may last for a while)..." << endl;
 
 	calcGrad(img1, gMag1, gDir1);
 	calcGrad(img2, gMag2, gDir2);
@@ -233,7 +241,7 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 	mtimer.PrintElapsedTimeMsg(msg);	
 	t1 = mtimer.GetElapsedSeconds();
 
-	//printf("\nElapsed time for the first stage: %s.\n", msg);
+	printf("\nElapsed time for the first stage: %s.\n", msg);
 
 	mtimer.Start();
 
@@ -297,7 +305,7 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 	curNum = 0;	
 	mtimer.Stop();
 	mtimer.PrintElapsedTimeMsg(msg);
-	//printf("\nElapsed time for the second stage: %s.\n", msg);
+	printf("\nElapsed time for the second stage: %s.\n", msg);
 	float t2 = mtimer.GetElapsedSeconds();
 
 	//cout<<"\nBegin matching line segments in individuals"<<endl;

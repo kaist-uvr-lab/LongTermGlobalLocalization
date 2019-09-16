@@ -61,14 +61,21 @@ private:
 	float minLineLength = 0;
 
 	// the threshold controling the size of thte impact region of a segment, see paper for detail
-	float  expandWidth = 20.0;
+	//float  expandWidth = 20.0;
+
+	// **Changed : For faster computation.
+	float  expandWidth = 10.0;
 
 	int   nAvgDesDist = 2;
 	bool isScaleChangeExisting = false;
 	bool isTwoLineHomography = true;
 
 	// the number of octaves used in the image pyramids
-	int nOctave = 4;
+	//int nOctave = 4;
+
+	// **Changed : For faster computation.
+	int nOctave = 2;
+
 	// the number of layers in the each octave
 	int nOctaveLayer = 2;
 

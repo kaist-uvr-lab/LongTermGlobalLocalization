@@ -395,7 +395,7 @@ int PoseFromColmap(ORB_SLAM2::System &SLAM, vector<string> &vstrImageFilenames, 
 	//		iteration--;
 	//	}
 	// Stop all threads
-	SLAM.Shutdown(false);
+	//SLAM.Shutdown(false);
 
 	//// Tracking time statistics
 	//sort(vTimesTrack.begin(), vTimesTrack.end());
