@@ -44,6 +44,10 @@ namespace  g2o {
 		_error[0] = Limg.dot(spt) / len1;
 		_error[1] = Limg.dot(ept) / len1;
 
+		//Added for normalization. 
+		_error[0] = _error[0] * alpha / length;
+		_error[1] = _error[1] * alpha / length;
+
 		//double len2 = Nc[0] * Nc[0] + Nc[1] * Nc[1];
 		//std::cout <<"Limg::"<< Limg << std::endl<<"Nc="<<Lc.block<3,1>(0,0);
 		//std::cout << Nc.dot(spt) << ", " << Nc.dot(ept) << std::endl;
@@ -71,6 +75,8 @@ namespace  g2o {
 		J1.row(0) << -Nc[0] * spt.dot(Nc) / len3 + spt[0] / len, -Nc[1] * spt.dot(Nc) / len3 + spt[1] / len, 1 / len;
 		J1.row(1) << -Nc[0] * ept.dot(Nc) / len3 + ept[0] / len, -Nc[1] * ept.dot(Nc) / len3 + ept[1] / len, 1 / len;
 
+		// Added for normalization of the error term. 
+		J1 = (alpha / length) * J1;
 		Matrix<double, 3, 6> J2 = Matrix<double, 3, 6>::Zero();
 		J2.block<3, 3>(0, 0) = K;
 		Matrix<double, 6, 4> J3 = Matrix<double, 6, 4>::Zero();

@@ -90,13 +90,21 @@ namespace ORB_SLAM2{
 			e->setLevel(0);
 			e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(0)));
 
-			e->setInformation(Eigen::Matrix2d::Identity());
-			g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
-			rk->setDelta(deltaMono);
-			e->setRobustKernel(rk);
-			
 			e->spt << spt.at<float>(0), spt.at<float>(1), spt.at<float>(2);
 			e->ept << ept.at<float>(0), ept.at<float>(1), ept.at<float>(2);
+			float dx = spt.at<float>(0) - ept.at<float>(0);
+			float dy = spt.at<float>(1) - ept.at<float>(1);
+			float length = sqrt(dx*dx + dy*dy);
+			float alpha = 100;
+			e->length = length;
+			e->alpha = alpha;
+
+			e->setInformation(Eigen::Matrix2d::Identity());
+			g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
+			//rk->setDelta(deltaMono);
+			// Set adaptive threshold for huber cost function.
+			rk->setDelta(deltaMono * alpha / length);
+			e->setRobustKernel(rk);
 
 			//e->T = Eigen::Matrix<double, 6, 6>(T.data);
 
@@ -141,25 +149,39 @@ namespace ORB_SLAM2{
 			//nBad = 0;
 			optimizer.initializeOptimization(0);
 			
-			std::cout << "before starting optimize" << std::endl;
-			for (size_t i = 0, iend = vpEdgesLineOptimization.size(); i < iend; i++)
-			{
+			if (it == 0) {
+				std::cout << "before starting optimize" << std::endl;
+				double sum1 = 0;
+				for (size_t i = 0, iend = vpEdgesLineOptimization.size(); i < iend; i++)
+				{
+					Eigen::Vector3d rho;
+					double chi2 = 0.0;
+					g2o::EdgeLineOptimization* e = vpEdgesLineOptimization[i];
+					e->computeError();
+					e->robustKernel()->robustify(e->chi2(), rho);
+					chi2 = rho[0];
+					std::cout << "Length = " << e->length << " || chi2 in the beginning " << it << " err:: " << chi2;
+					std::cout << " || Original error:: " << (chi2 / ((e->alpha / e->length)*(e->alpha / e->length))) << std::endl;
+					sum1 += chi2;
+				}
 
-				g2o::EdgeLineOptimization* e = vpEdgesLineOptimization[i];
-				float chi2 = e->chi2();
-				std::cout << "iter=" << it << "err::" << chi2 << std::endl;
+				std::cout << "total sum of chi2 in the beginning " << it << " : " << sum1 << std::endl;
 			}
-			
 			optimizer.optimize(its[it]);
 
+			double sum2 = 0;
 			for (size_t i = 0, iend = vpEdgesLineOptimization.size(); i < iend; i++)
 			{
-				
+				Eigen::Vector3d rho;
+				double chi2 = 0.0;
 				g2o::EdgeLineOptimization* e = vpEdgesLineOptimization[i];
-				float chi2 = e->chi2();
-				std::cout <<"iter="<<it<< "err::" << chi2 << std::endl;
+				e->robustKernel()->robustify(e->chi2(), rho);
+				chi2 = rho[0];
+				std::cout <<"iter="<<it<< "err::" << chi2 << " || Original error:: " << (chi2 / ((e->alpha / e->length)*(e->alpha / e->length))) << std::endl;
+				sum2 += chi2;
 			}
-			
+			std::cout << "total sum of chi2 in iter " << it << " : " << sum2 << std::endl;
+
 			//g2o::LineVertex* vRecover = static_cast<g2o::LineVertex*>(optimizer.vertex(0));
 			//cv::Mat Lw;
 			//Eigen::Vector4d param = vRecover->estimate();

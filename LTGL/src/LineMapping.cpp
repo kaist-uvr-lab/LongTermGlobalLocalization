@@ -707,7 +707,9 @@ pair<float,int> LineMapping::ComputeModelScore(const Mat &tmpPlucker, const Mat 
 		Mat projectedL2d = lK * n_c;
 
 		float len = sqrt(projectedL2d.at<float>(0)*projectedL2d.at<float>(0) + projectedL2d.at<float>(1)*projectedL2d.at<float>(1));
-		float tmpE = abs(spt.dot(projectedL2d) / len) + abs(ept.dot(projectedL2d) / len);
+		float e1 = spt.dot(projectedL2d) / len;
+		float e2 = ept.dot(projectedL2d) / len;
+		float tmpE = abs(e1) + abs(e2);
 		
 		if (abs(tmpE) > th) {
 			inlierIndex[pTmpKF] = false;
@@ -967,10 +969,30 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	cout << "----And Erasing unreliable lines, which include only two observations. -----" << endl;
 	int count2 = 0;
 
-	int numberLinesBefore = (_mpMap->GetLine3ds()).size();
+	vector<Line3d*> unOptLines3D = _mpMap->GetLine3ds();
+	int numberLinesBefore = unOptLines3D.size();
 	cout << numberLinesBefore << " of lines were registered before optimization.. " << endl;
 
-	for (vector<ORB_SLAM2::KeyFrame*>::iterator vit = vpKFS.begin(), vend = vpKFS.end(); vit != vend; vit++) {
+	for (vector<ORB_SLAM2::Line3d*>::iterator vit = unOptLines3D.begin(), vend = unOptLines3D.end(); vit != vend; vit++) {
+		Line3d* pLine = *vit;
+		if (!pLine)
+			continue;
+		if (pLine->GetNumObservations() < 5) {
+			cout << "Erased!" << endl;
+			_mpMap->EraseLine3d(pLine);
+
+			map<KeyFrame*, size_t> tmpObs = pLine->GetObservations();
+			for (map<KeyFrame*, size_t>::iterator mObsIt = tmpObs.begin(), mObsEnd = tmpObs.end(); mObsIt != mObsEnd; mObsIt++) {
+				KeyFrame* pTmpKF = mObsIt->first;
+				pTmpKF->EraseLine3dMatch(pLine);
+			}
+			continue;
+		}
+		ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
+		pLine->UpdateEndpts();
+	}
+
+	/*for (vector<ORB_SLAM2::KeyFrame*>::iterator vit = vpKFS.begin(), vend = vpKFS.end(); vit != vend; vit++) {
 		cout << "Optimization : " << count2 << " / " << vpKFS.size() << " KeyFrames has done. " << endl;
 		count2++;
 
@@ -989,7 +1011,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
 			pLine->UpdateEndpts();
 		}
-	}
+	}*/
 
 	cout << "----Optimization done." << endl;
 	numberLinesBefore = (_mpMap->GetLine3ds()).size();

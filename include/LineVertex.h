@@ -65,6 +65,7 @@ namespace g2o {
 		virtual void linearizeOplus();
 
 		Vector3d spt, ept;
+		float length, alpha;
 		Matrix<double, 6, 6> T;
 		Matrix<double, 3, 3> K;
 
