@@ -2,18 +2,24 @@
 
 ## Temporal Dataset can be downloaded here
  - [labri_landscape_overcase](https://drive.google.com/open?id=1o4i9grRQoC7nAmFOOKjGoray5fZ47H2u)
- - [uvrlab_short_s7_1280_720](https://drive.google.com/file/d/18axX92sH0MN_MAiIB9iJ6xrldUr5ZM0a/view?usp=sharing)
+ - [uvrlab_short_s7_1280_720](https://drive.google.com/file/d/1VYSTurUPFkotIjCHxG_bGgdDXl-kV3gx/view?usp=sharing)
+ - [line3dpp_testdata](https://drive.google.com/file/d/1vQDOZrm6ZPEjbKmgcJXEwQiCNlOxDNds/view?usp=sharing)
 
 ## How to use. 
   ```
- ./LTGL/src/main -v (vocab path) -p (paramter path) -i (img path) -c (colmap_path) -s
+ ./LTGL/src/main -v (vocab path) -p (paramter path) -i (img path) -c (colmap_path) -s -m -r -l
   ```
 
 (vocab path) path to ORBvoc.bin. 
 (paramter path) path to parameter file (ex. s7_1280.yaml)
 (img path) includes all of 'images', 'results', 'undistort' directory. 
-(-col) option will make it use camera poses pre-calucated from colmap.
+(-c) option will make it use camera poses pre-calucated from colmap.
 (-s) option will make it use of save/load function. 
+(-m) option will make it use of save/load function. 
+(-r) option will make it use of save/load function. 
+(-l) option will make it use of save/load function. 
+ * Should change the file names of Map.mapfile / Map.lineNotOptMapfile / Map.lineOptMapfile in the setting file (.yaml file) to save the resulting maps.
+
 
 ## Updating ...
 **Reference**: 
