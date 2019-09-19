@@ -139,10 +139,16 @@ public:
 	void SaveMap(int save_mode);
 
 #ifdef FUNC_MAP_SAVE_LOAD
+public:
+	bool GetReuseMap() { return bReuseMap; }
 private:
     // Save/Load functions
     void SaveMap(const string &filename);
     bool LoadMap(const string &filename);
+	// Check if map is reused.
+	bool bReuseMap;
+	
+
 #endif
 
 private:

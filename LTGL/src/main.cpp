@@ -28,9 +28,12 @@
 #include<LSM/src/LSM.h>
 #include"Line3d.h"
 #include"boost/filesystem.hpp"
+#include"boost/program_options.hpp"
+#include"boost/program_options/errors.hpp"
 #include"LineMapping.h"
 
 using namespace std;
+using namespace boost::program_options;
 
 void LoadImages(const string &strFile, vector<string> &vstrImageFilenames,
 	vector<double> &vTimestamps);
@@ -441,7 +444,7 @@ void LoadImages(const string &strFile, vector<string> &vstrImageFilenames, vecto
 {
 	ifstream f;
 	f.open(strFile.c_str());
-	cout << "Loading images ..." << endl;
+	cout << "Loading images ... ";
 
 	// skip first three lines
 	string s0;
@@ -465,6 +468,8 @@ void LoadImages(const string &strFile, vector<string> &vstrImageFilenames, vecto
 			vstrImageFilenames.push_back(sRGB);
 		}
 	}
+	cout << "Done!!" << endl;
+
 }
 
 int ComputePose(ORB_SLAM2::System &SLAM, vector<string> &vstrImageFilenames, vector<double> &vTimestamps, string &imgDir, int iteration) {
@@ -581,44 +586,104 @@ int ComputePose(ORB_SLAM2::System &SLAM, vector<string> &vstrImageFilenames, vec
 
 int main(int argc, char **argv)
 {
-	if (argc < 5)
-	{
-		cerr << endl << "Usage: ./mono_tum path_to_vocabulary path_to_settings path_to_sequence [1|0](save map?)" << endl;
-		return 1;
+	options_description desc("Allowed options");
+	desc.add_options()
+		("help,h", "produce a help screen")
+		("vocab_path,v", value<string>(), "Path to ORBvoc.bin")
+		("parameter_path,p", value<string>(), "Path to parameter file(.yaml format)")
+		("img_path,i", value<string>(), "Path to image folder(that includes 'images' folder)")
+		("colmap,c", value<string>(), "Path to colmap result for precalculated camera poses.")
+		("save_map,s", "Use save/load map function")
+		("line_match,m", "Do Line Match")
+		("RANSAC,r", "Use RANSAC in line registration")
+		("LSD,l", "Use LSD");
+
+	variables_map vm;
+	store(parse_command_line(argc, argv, desc), vm);
+	if (vm.count("help")) {
+		cout << "Display all options" << endl;
+		cout << desc << endl;
 	}
 
-	// Retrieve paths to images
+	if (vm.count("vocab_path")) { cout << "**Vocab_path is set to " << vm["vocab_path"].as<string>() << endl; }
+	else {
+		cout << "Please specify vocab_path.. " << endl;
+		return 0;
+	}
+	if (vm.count("parameter_path")) { cout << "**Parameter_path is set to " << vm["parameter_path"].as<string>() << endl; }
+	else {
+		cout << "Please specify parameter_path.. " << endl;
+		return 0;
+	}
+	if (vm.count("img_path")) { cout << "**Img_path is set to " << vm["img_path"].as<string>() << endl; }
+	else {
+		cout << "Please specify img_path.. " << endl;
+		return 0;
+	}
+	if (vm.count("colmap")) { cout << "Camera pose will be loaded from colmap : " << vm["colmap"].as<string>() << endl << endl; }
+	if (vm.count("line_match")) { cout << "Match lines " << endl; }
+	if (vm.count("RANSAC")) { cout << "Use RANSAC in initialization for line registration " << endl; }
+	if (vm.count("LSD")) { cout << "Uses LSD for line extraction." << endl << endl; }
+
+
+	// System Variables.
 	vector<string> vstrImageFilenames;
 	vector<double> vTimestamps;
-	string imgDir = string(argv[3]);
-	string strFile = imgDir + "/images.txt";
-	LoadImages(strFile, vstrImageFilenames, vTimestamps);
+	string imgDir, vocabDir, paramDir, colmapDir;
+	string strFile, writeKFinfo, lineDir;
+	bool bSaveMap = false;
+	bool bPoseFromColmap = false;
+	bool bSuccessLoadMap = false;
 
-	string writeKFinfo = imgDir + "/undistort/KFinfo.txt";
-	string lineDir = imgDir + "/results";
+	// Option for line registration.
+	bool bLineMatch = false;
+	bool bLineRANSAC = false;
+	bool bUseLSD = false;
 
+	int iteration = 1;	// iteration in SLAM mode.
+	
+	// Set modes for current operation. OffLine : Map generation / OnLine : Localization.
 	enum mode { OffLine, OnLine };
 	mode currentMode = OffLine;
 
-	int iteration = 1;
+	// Load variables.
+	imgDir = vm["img_path"].as<string>();
+	vocabDir = vm["vocab_path"].as<string>();
+	paramDir = vm["parameter_path"].as<string>();
+	if (vm.count("colmap")) {
+		bPoseFromColmap = true;
+		colmapDir = vm["colmap"].as<string>();
+	}
+
+	bLineMatch = vm.count("line_match");
+	bLineRANSAC = vm.count("RANSAC");
+	bUseLSD = vm.count("LSD");
+
+	// Load image  file names & time stamps.
+	strFile = imgDir + "/images.txt";
+	LoadImages(strFile, vstrImageFilenames, vTimestamps);
+
+	// Write KF information into txt file (for further processing in python.)
+	writeKFinfo = imgDir + "/undistort/KFinfo.txt";
+	lineDir = imgDir + "/results";
+
 	// Create SLAM system. It initializes all system threads and gets ready to process frames.
-	ORB_SLAM2::System SLAM(argv[1], argv[2], ORB_SLAM2::System::MONOCULAR, true, (bool)atoi(argv[4]));
+	ORB_SLAM2::System SLAM(vocabDir, paramDir, ORB_SLAM2::System::MONOCULAR, true, bSaveMap);
+	if (SLAM.GetReuseMap())
+		bSuccessLoadMap = true;
 
 	// Generate Global Map using ORB-SLAM. 
-	bool isComputePose = atoi(argv[5]);
-	bool isColmap = atoi(argv[6]);
-	if (isComputePose) {
-		if (isColmap) {
-			string sSfMDir = string(argv[7]);
-			PoseFromColmap(SLAM, vstrImageFilenames, sSfMDir);
-		}
+	if (!bSuccessLoadMap) {
+		if (bPoseFromColmap)
+			PoseFromColmap(SLAM, vstrImageFilenames, colmapDir);
 		else
 			ComputePose(SLAM, vstrImageFilenames, vTimestamps, imgDir, iteration);
 	}
 
 	if (currentMode == OffLine) {
 		LineMapping LR = LineMapping();
-		LR.Undistort(string(argv[2]), vstrImageFilenames, imgDir);
+		LR.Undistort(paramDir, vstrImageFilenames, imgDir);
+		LR.SetOptions(bLineMatch, bLineRANSAC, bUseLSD);
 		LR.LineRegistration(SLAM, vstrImageFilenames, writeKFinfo, imgDir + "/undistort");
 
 		// Stop all threads

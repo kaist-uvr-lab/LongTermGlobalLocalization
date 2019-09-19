@@ -57,6 +57,13 @@ public:
 	// Test with visualization
 	void TestVisualization(vector<ORB_SLAM2::KeyFrame*> vpKFS, string &imgDir, vector<string> &vstrImageFilenames);
 
+	// Set line registration option;
+	void SetOptions(bool isLineRegisterInitDone, bool isLineRANSACInitDone, bool isLSD);
 private:
 	float mnMinX, mnMinY, mnMaxX, mnMaxY;
+
+	// You may change it.
+	bool mbIsLineRegisterInit = false;
+	bool mbIsLineRANSACInit = false;
+	bool mbIsLSD = false;
 };

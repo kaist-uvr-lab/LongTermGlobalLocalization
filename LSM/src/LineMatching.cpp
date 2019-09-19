@@ -5,7 +5,8 @@
 CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat line2, Mat tnode2, Mat tcolorImg1, Mat tcolorImg2, Mat &mlines, Mat &mlineIndex, bool isVerbose,
 	 bool isBuildingImagePyramids, float nAvgDesDist, bool isProvidedJunctions, bool isTwoLineHomog, int nOctave, int nOctaveLayer, float desDistThrEpi, float desDistThrProg, 
 	 float fmatThr, float hmatThr, int nNeighborPts, int nEnterGroup, float rotAngleThr, float sameSideRatio, float regionHeight, float junctionDistThr,
-	 float intensityProfileWidth, float radiusPointMatchUnique, float difAngThr, float rcircle, float truncateThr, float fanThr, string outFileName, bool isPrecomputedF, Mat &_Fmat)
+	 float intensityProfileWidth, float radiusPointMatchUnique, float difAngThr, float rcircle, float truncateThr, float fanThr, string outFileName, bool isPrecomputedF, Mat &_Fmat,
+	Mat &junctions, Mat &junctionIndices)
 {	
 	_outFileName = outFileName;
 	_isTwoLineHomog = isTwoLineHomog;
@@ -256,8 +257,9 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 		//cout<<"LJL matches filtered by topological constraint: " << vstrFanMatch.size()<<endl;
 		fanMatch2LineMatch(vstrFanMatch, vstrLineMatch);
 
-		if (vstrLineMatch.size() == 0)
-			return;
+		if (vstrLineMatch.size() == 0 || vstrFanMatch.size() < 5)
+			return; // If below 4, it will lead to error in function unique match. 
+
 		uniqueLineMatch(vstrLineMatch, vtmp);				
 		//cout<<"Line matches filtered by topological constraint: " << vstrLineMatch.size()<<endl;	
 		updatePointMatchFromFanMatches();
@@ -270,19 +272,27 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 
 		preNum = curNum;	
 
-		if (vstrFanMatch.size() < 5)
-			return; // If below 4, it will lead to error in function addFansMatch. 
- 		
+		if (vstrLineMatch.size() == 0 || vstrFanMatch.size() < 5)
+			return; // If below 4, it will lead to error in function unique match. 
+
 		addFansMatch(desDistThr, fDistThr);
 
 		//cout<<"LJL matches after propagation: " << vstrFanMatch.size()<<endl;
  		updatePointMatchFromFanMatches();		
 		//cout<<"point matches after expanding: " << vstrPointMatch.size()<<endl;
 		fanMatch2LineMatch(vstrFanMatch, vstrLineMatch);
+
+		if (vstrLineMatch.size() == 0 || vstrFanMatch.size() < 5)
+			return; // If below 4, it will lead to error in function unique match. 
+
 		uniqueLineMatch(vstrLineMatch, vtmp);
 		//cout<<"Line matches after propagation: " << vstrLineMatch.size()<<endl;	
 		topoFilter(vstrFanMatch, vstrPointMatch);
 		//cout<<"LJL matches after topological filtering: " << vstrFanMatch.size()<<endl;
+
+		if (vstrLineMatch.size() == 0 || vstrFanMatch.size() < 5)
+			return; // If below 4, it will lead to error in function unique match. 
+
 		updatePointMatchFromFanMatches();		
 		//cout<<"point matches after expanding: "<<vstrPointMatch.size()<<endl;
 		addFansMatch(desDistThr, fDistThr);
@@ -339,14 +349,49 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 	//cout<<"\nTotal time: "<<totTime<<" seconds";
 
 	lineMatches2Mat(mlines, mlineIndex);
+
+	// Added to return junction information.
+	Mat tmpJunctions, tmpJunctionIdx;
+
+	setJunctionInfo(tmpJunctions, tmpJunctionIdx);
+	tmpJunctions.copyTo(junctions);
+	tmpJunctionIdx.copyTo(junctionIndices);
+
 	if (isVerbose) plotPointMatches(colorImg1.clone(), colorImg2.clone(), vstrPointMatch, "Final point matches");
 	if (isVerbose)
 	{ 
 		plotLineMatches(colorImg1.clone(), colorImg2.clone(), vstrLineMatch, "Final line matches");	
 		waitKey();
 	}
-	// 
 };
+
+void CLineMatching::setJunctionInfo(Mat &junctions, Mat&junctionIdx) {
+	// Set junction informations from final lines matches.
+	int nFanMatches = vstrFanMatch.size();
+	for (int i = 0; i < nFanMatches; i++)
+	{
+		// Index of LJL junction in each image. 
+		int serial1 = vstrFanMatch[i].fserial1;
+		int serial2 = vstrFanMatch[i].fserial2;
+
+		// Index for first line in both images.
+		int img1LineIdx1 = vstrFanSection1[serial1].strbranch1.lineSerial;
+		int img2LineIdx1 = vstrFanSection2[serial2].strbranch1.lineSerial;
+
+		// Index for second line in both images.
+		int img1LineIdx2 = vstrFanSection1[serial1].strbranch2.lineSerial;
+		int img2LineIdx2 = vstrFanSection2[serial2].strbranch2.lineSerial;
+
+		Point2f junctionPt1 = vstrFanSection1[serial1].intsection;
+		Point2f junctionPt2 = vstrFanSection2[serial2].intsection;
+		Mat tmpJunction = (Mat_<float>(1, 4, CV_32F) << junctionPt1.x, junctionPt1.y, junctionPt2.x, junctionPt2.y);
+		Mat tmpJunctionIdx = (Mat_<int>(1, 4, CV_32S) << img1LineIdx1, img1LineIdx2, img2LineIdx1, img2LineIdx2);
+		junctions.push_back(tmpJunction);
+		junctionIdx.push_back(tmpJunctionIdx);
+
+	}
+}
+
 
 void CLineMatching::descriptorEvaluationUniquePtMatches()
 {

@@ -96,6 +96,7 @@ private:
 	//added. 
 	bool _isPreComputedF = true;
 	void findFmatInliers(vector<Point2f> &PointSet1, vector<Point2f> &PointSet2, Mat &FMat, bool *pbIsKept);
+	void setJunctionInfo(Mat &junctions, Mat&junctionIdx);
 
 	void extendIntensityValue(Mat &src1, Mat &src2);
 	void initialize_providedJunctions(Mat img, strLine* strline, int nline,  Mat &node, vector<strFanSection>  &vstrFanSection);
@@ -223,7 +224,7 @@ public:
 		bool isVerb, bool isBuildingImagePyramids, float nAvgDesDist, bool isProvidedJunctions, bool isTwoLineHomog,
 		int nOctave, int nOctaveLayer, float desDistThr, float fmatThr, float fmatDesThrProg, float hmatThr, int nNeighborPts, int nEnterGroup,
 		float rotAngleThr, float sameSideRatio, float regionHeight, float junctionDistThr, float intensityProfileWidth, float radiusPointMatchUnique, float difAngThr,
-		float rcircle, float truncateThr, float fanThr, string outFileName, bool isPreComputedF, Mat &Fmat);
+		float rcircle, float truncateThr, float fanThr, string outFileName, bool isPreComputedF, Mat &Fmat, Mat &junctions, Mat &junctionIndex);
 		~CLineMatching();	
 };
 

@@ -28,6 +28,7 @@
 #include "ORBextractor.h"
 #include "Frame.h"
 #include "KeyFrameDatabase.h"
+#include "Junction.h"
 
 #include <mutex>
 #ifdef FUNC_MAP_SAVE_LOAD
@@ -41,6 +42,9 @@ class MapPoint;
 class Frame;
 class KeyFrameDatabase;
 class Line3d;
+class JunctionPair;
+class Junction;
+class LineSegment;
 
 class KeyFrame
 {
@@ -255,10 +259,20 @@ public:
 	cv::Mat Get2DLine(int idx) { return mLines2D.row(idx); };
 	cv::Mat GetAll2DLines() { return mLines2D; };
 	void EraseLine3dMatch(Line3d* pLine3d);
+	
+	void AddJunction2d(int idx, JunctionPair *newJunction);
+	void AddJunction2d(int idx1, int idx2, JunctionPair *newJunction);
+	vector<JunctionPair*> GetJunction2d();
+	vector<JunctionPair*> GetJunction2d(int lineidx) { return mJunctions2D[lineidx]; };
+
 private:
 	// Extracted 2D lines.
 	cv::Mat mLines2D;
 	int nLines2D;
+
+	// Created junctions related to 2D lines. 
+	map<int, vector<JunctionPair*>> mJunctions2D;
+
 
 	//Registered 3D Lines.
 	std::vector<Line3d*> mvpLines;

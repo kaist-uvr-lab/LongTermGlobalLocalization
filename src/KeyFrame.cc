@@ -775,5 +775,15 @@ void KeyFrame::SetExtracted2DLines(cv::Mat &lines) {
 	}
 }
 
+void KeyFrame::AddJunction2d(int idx, JunctionPair *newJunction) {
+	mJunctions2D[idx].push_back(newJunction);
+}
+
+void KeyFrame::AddJunction2d(int idx1, int idx2, JunctionPair *newJunction) {
+	AddJunction2d(idx1, newJunction);
+	AddJunction2d(idx2, newJunction);
+}
+
+
 } //namespace ORB_SLAM
  

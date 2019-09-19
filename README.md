@@ -2,35 +2,27 @@
 
 ## Temporal Dataset can be downloaded here
  - [labri_landscape_overcase](https://drive.google.com/open?id=1o4i9grRQoC7nAmFOOKjGoray5fZ47H2u)
+ - [uvrlab_short_s7_1280_720](https://drive.google.com/file/d/18axX92sH0MN_MAiIB9iJ6xrldUr5ZM0a/view?usp=sharing)
 
 ## How to use. 
   ```
- ./LTGL/src/main (ORBvoc.bin path) (s7_640_480.yaml path) (img path) 1
+ ./LTGL/src/main -v (vocab path) -p (paramter path) -i (img path) -c (colmap_path) -s
   ```
-(img path) includes all of 'images', 'results', 'undistort' directory. 1 means it will save/load map. 
+
+(vocab path) path to ORBvoc.bin. 
+(paramter path) path to parameter file (ex. s7_1280.yaml)
+(img path) includes all of 'images', 'results', 'undistort' directory. 
+(-col) option will make it use camera poses pre-calucated from colmap.
+(-s) option will make it use of save/load function. 
 
 ## Updating ...
 **Reference**: 
 
-- [Alkaid-Benetnash/ORB_SLAM2](https://github.com/Alkaid-Benetnash/ORB_SLAM2)
+- [Jiankai-Sun/ORB_SLAM2](https://github.com/Jiankai-Sun/ORB_SLAM2_Enhanced)
 
 - [raulmur/ORB_SLAM2](https://github.com/raulmur/ORB_SLAM2)
 
-- [raulmur/ORB_SLAM2 - Issue #19](https://github.com/raulmur/ORB_SLAM2/issues/19)
-
-- [raulmur/ORB_SLAM2 - Issues #246](https://github.com/raulmur/ORB_SLAM2/issues/246)
-
-- [poine/ORB_SLAM2 - http://recherche.enac.fr/~drouin/slam/orbslam2/](http://recherche.enac.fr/~drouin/slam/orbslam2/poine_orbslam2_04_07_16.tgz), which includes Python Interface.
-
-- [MathewDenny/ORB_SLAM2](https://github.com/MathewDenny/ORB_SLAM2)
-
 **Original Authors:** [Raul Mur-Artal](http://webdiis.unizar.es/~raulmur/), [Juan D. Tardos](http://webdiis.unizar.es/~jdtardos/), [J. M. M. Montiel](http://webdiis.unizar.es/~josemari/) and [Dorian Galvez-Lopez](http://doriangalvez.com/) ([DBoW2](https://github.com/dorian3d/DBoW2))
-
-**14 Jul 2017**: Binary format ORB vocabulary and Map save/load are now supported(See section 10 and 11).
-
-**13 Jan 2017**: OpenCV 3 and Eigen 3.3 are now supported.
-
-**22 Dec 2016**: Added AR demo (see section 7).
 
 ORB-SLAM2 is a real-time SLAM library for **Monocular**, **Stereo** and **RGB-D** cameras that computes the camera trajectory and a sparse 3D reconstruction (in the stereo and RGB-D case with true scale). It is able to detect loops and relocalize the camera in real time. We provide examples to run the SLAM system in the [KITTI dataset](http://www.cvlibs.net/datasets/kitti/eval_odometry.php) as stereo or monocular, in the [TUM dataset](http://vision.in.tum.de/data/datasets/rgbd-dataset) as RGB-D or monocular, and in the [EuRoC dataset](http://projects.asl.ethz.ch/datasets/doku.php?id=kmavvisualinertialdatasets) as stereo or monocular. We also provide a ROS node to process live monocular, stereo or RGB-D streams. **The library can be compiled without ROS**. ORB-SLAM2 provides a GUI to change between a *SLAM Mode* and *Localization Mode*, see section 9 of this document.
 
@@ -99,75 +91,5 @@ We use modified versions of the [DBoW2](https://github.com/dorian3d/DBoW2) libra
 ## ROS (optional)
 We provide some examples to process the live input of a monocular, stereo or RGB-D camera using [ROS](ros.org). Building these examples is optional. In case you want to use ROS, a version Hydro or newer is needed.
 
-## Boost(optional)
-
+## Boost
 Map save/load feature needs boost library and more specifically the`libboost_serialization` library.
-
-See section 11
-
-# 3. Building ORB-SLAM2 library and examples
-
-Clone the repository:
-```
-git clone https://github.com/JiankaiSun-SJTU-MVIG-training/ORB_SLAM2_Enhanced.git ORB_SLAM2
-```
-
-We provide a script `build.sh` to build the *Thirdparty* libraries and *ORB-SLAM2*. Please make sure you have installed all required dependencies (see section 2). Execute:
-```
-cd ORB_SLAM2
-chmod +x build.sh
-./build.sh
-```
-
-This will create **libORB_SLAM2.so**  at *lib* folder and the executables **mono_tum**, **mono_kitti**, **rgbd_tum**, **stereo_kitti**, **mono_euroc** and **stereo_euroc** in *Examples* folder.
-
-
-# 4. Processing your own sequences
-You will need to create a settings file with the calibration of your camera. See the settings file provided for the TUM and KITTI datasets for monocular, stereo and RGB-D cameras. We use the calibration model of OpenCV. See the examples to learn how to create a program that makes use of the ORB-SLAM2 library and how to pass images to the SLAM system. Stereo input must be synchronized and rectified. RGB-D input must be synchronized and depth registered.
-
-# 5. SLAM and Localization Modes
-You can change between the *SLAM* and *Localization mode* using the GUI of the map viewer.
-
-### SLAM Mode
-This is the default mode. The system runs in parallal three threads: Tracking, Local Mapping and Loop Closing. The system localizes the camera, builds new map and tries to close loops.
-
-### Localization Mode
-This mode can be used when you have a good map of your working area. In this mode the Local Mapping and Loop Closing are deactivated. The system localizes the camera in the map (which is no longer updated), using relocalization if needed. 
-
-# 6. Binary Format ORB Vocabulary
-
-You can load ORB vocabulary in either text or binary format. The format is determined by suffix(.txt for text format and .bin for binary format).
-
-`build.sh` will generate a text-to-binary convertor `bin_vocabulary` in `Vocabulary/` . You can also find it as a target in `CMakeLists.txt`.
-
-`bin_vocabulary` will convert `./ORBvoc.txt` to `./ORBvoc.bin` and you can use the new `ORBvoc.bin` as  `PATH_TO_VOCABULARY`  wherever needed.
-
-PS: binary format is loaded faster and text format is more human-readable.
-
-# 7. Map Save/Load
-
-#### Enable:
-
-You can enable this feature by defining a new variable `USE_MAP_SAVE_LOAD` when running cmake.
-
-For example, you can change `cmake .. -DCMAKE_BUILD_TYPE=Release` to `cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_MAP_SAVE_LOAD=1` after `echo "Configuring and building ORB_SLAM2 ..."` in `build.sh`.
-
-But `CMakeCache.txt` should be deleted if you want to undefine this variable.
-
-#### Usage:
-
-This feature is integrated with `class System`. The path of mapfile can be set by adding `Map.mapfile: map.bin` to ORB_SLAM2's settings file. See the last few line of `Example/Monocular/TUM1.xml`.
-
-To save a map, you need construct `ORB_SLAM2::System` with the last parameter be `true`. Then the `System` will save map to mapfile specified in setting file when `ShutDown`.
-
-With a readable mapfile, map will be loaded automatically and `System` will run in localization mode, but you can change it to SLAM mode later.
-
-If you set a mapfile but it doesn't exist, `System` will create new map.
-
-mono_tum has been updated as a simple example of this functionality. An extra command line parameter(0 or 1) should be given to indicate whether you want to save map or not.
-
-#### Implementation related:
-
-I use boost_serialization library to serialize `Map`, `MapPoint`, `KeyFrame`,`KeyFrameDatabase`, `cv::Mat`, `DBoW2::BowVector`, `DBoW2::FeatureVector`. In brief, only the `ORBVector` isn't serialized.
-
-This feature is tested with boost 1.64 and it works fine mostly. There is still some occasional segmentfault to dig in.

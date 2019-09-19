@@ -23,7 +23,7 @@ public:
 	void detectLine(char* imfile, Mat &mLines, float minLineLength);
 	void drawDectectedLine(Mat Img, Mat mLines, string imgName);
 	void drawPartiallyConnectedLine(Mat Img, Mat mLines, string imgName, Mat fans);
-	pair<Mat*, Mat*> lsm();
+	void lsm(pair<Mat*, Mat*> &lines, pair<Mat*, Mat*> &junctions);
 	void setFmat(Mat &Fmat) { _Fmat = Fmat; }
 
 public:
@@ -101,4 +101,6 @@ private:
 
 	// Final results of matched lines.
 	Mat mlines, mlineIndex;
+	Mat mJunctions, mJunctionIndices;
+
 };

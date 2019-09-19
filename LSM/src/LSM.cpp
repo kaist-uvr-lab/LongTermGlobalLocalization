@@ -140,7 +140,7 @@ void LSM::drawPartiallyConnectedLine(Mat Img, Mat mLines, string imgName, Mat fa
 	//waitKey(20);
 }
 
-pair<Mat*, Mat*> LSM::lsm() {
+void LSM::lsm(pair<Mat*, Mat*> &lines, pair<Mat*, Mat*> &junctions) {
 	Mat colorImg1 = imread(mImgName1, 3);
 	Mat colorImg2 = imread(mImgName2, 3);
 	Mat img1, img2;
@@ -224,12 +224,12 @@ pair<Mat*, Mat*> LSM::lsm() {
 	// return 0;
 
 	//waitKey();
-
+	 
 	CLineMatching *pLineMatching = new CLineMatching(img1, lines1, nodes1, img2, lines2, nodes2, colorImg1, colorImg2, mlines, mlineIndex,
 		isVerbose, isBuildingImagePyramids, nAvgDesDist, isProvideJunc, isTwoLineHomography,
 		nOctave, nOctaveLayer, desDistThrEpi, desDistThrProg, fmatThr, hmatThr, nNeighborPts, nEnterGroup,
 		rotAngThr, sameSideRatio, regionHeight, junctionDistThr, intensityProfileWidth, radiusPointMatchUnique, difAngThr,
-		rcircle, truncateThr, fanThr, outLineMatchesFileName, mIsPrecomputedF, _Fmat);
+		rcircle, truncateThr, fanThr, outLineMatchesFileName, mIsPrecomputedF, _Fmat, mJunctions, mJunctionIndices);
 
 	CIO *pIO = new CIO;
 	//pIO->writeData(outLineMatchesFileName, mlines);
@@ -239,9 +239,10 @@ pair<Mat*, Mat*> LSM::lsm() {
 	delete pLineMatching;
 	pLineMatching = NULL;
 	
-	pair<Mat*, Mat*> pLines = make_pair(&mlines, &mlineIndex);
+	//pair<Mat*, Mat*> pLines = make_pair(&mlines, &mlineIndex);
+	lines = make_pair(&mlines, &mlineIndex);
+	junctions = make_pair(&mJunctions, &mJunctionIndices);
 
-	return pLines;
 }
 
 

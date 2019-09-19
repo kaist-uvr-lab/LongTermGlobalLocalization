@@ -69,7 +69,7 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     }
 #ifdef FUNC_MAP_SAVE_LOAD
     cv::FileNode mapfilen = fsSettings["Map.mapfile"];
-    bool bReuseMap = false;
+    bReuseMap = false;
     if (!mapfilen.empty())
     {
         mapfile = (string)mapfilen;

@@ -623,49 +623,6 @@ bool LineMapping::InitializeLineParam(KeyFrame *_pKF1, KeyFrame *_pKF2, const Ma
 
 	triangulated_line.copyTo(tmpPlucker);
 
-	//float depthS1 = ((Ocw2 - Ocw1).dot(normalW2)) / ((Rcw1.t() * normPtS1).dot(normalW2));
-	//float depthE1 = ((Ocw2 - Ocw1).dot(normalW2)) / ((Rcw1.t() * normPtE1).dot(normalW2));
-	//float depthS2 = ((Ocw1 - Ocw2).dot(normalW1)) / ((Rcw2.t() * normPtS2).dot(normalW1));
-	//float depthE2 = ((Ocw1 - Ocw2).dot(normalW1)) / ((Rcw2.t() * normPtE2).dot(normalW1));
-
-	//// Depth should be greater than zero. 
-	//if (depthS1 < 0 || depthE1 < 0 || depthS2 < 0 || depthE2 < 0)
-	//	return false;
-
-	//Mat homoPtsS1 = (Mat_<float>(4, 1, CV_32F) << normPtS1.at<float>(0), normPtS1.at<float>(1), normPtS1.at<float>(2), 1 / depthS1);
-	//Mat point3DS1 = depthS1 * Twc1 * homoPtsS1;
-	//Mat homoPtsE1 = (Mat_<float>(4, 1, CV_32F) << normPtE1.at<float>(0), normPtE1.at<float>(1), normPtE1.at<float>(2), 1 / depthE1);
-	//Mat point3DE1 = depthE1 * Twc1 * homoPtsE1;
-
-	//Mat homoPtsS2 = (Mat_<float>(4, 1, CV_32F) << normPtS2.at<float>(0), normPtS2.at<float>(1), normPtS2.at<float>(2), 1 / depthS2);
-	//Mat point3DS2 = depthS2 * Twc2 * homoPtsS2;
-	//Mat homoPtsE2 = (Mat_<float>(4, 1, CV_32F) << normPtE2.at<float>(0), normPtE2.at<float>(1), normPtE2.at<float>(2), 1 / depthE2);
-	//Mat point3DE2 = depthE2 * Twc2 * homoPtsE2;
-
-	//// Check reprojection error. 
-	//Mat projectedS2C1 = K * Tcw1.rowRange(0, 3) * point3DS2;
-	//Mat projectedE2C1 = K * Tcw1.rowRange(0, 3) * point3DE2;
-	//Mat projectedS1C2 = K * Tcw2.rowRange(0, 3) * point3DS1;
-	//Mat projectedE1C2 = K * Tcw2.rowRange(0, 3) * point3DE1;
-
-	//projectedS2C1 = projectedS2C1 / projectedS2C1.at<float>(2);
-	//projectedE2C1 = projectedE2C1 / projectedE2C1.at<float>(2);
-	//projectedS1C2 = projectedS1C2 / projectedS1C2.at<float>(2);
-	//projectedE1C2 = projectedE1C2 / projectedE1C2.at<float>(2);
-
-	//// It should be less than 1. Must be almost identical. 
-	//float dist1 = PointToLineDist(projectedS2C1, ptS1, ptE1);
-	//float dist2 = PointToLineDist(projectedE2C1, ptS1, ptE1);
-	//float dist3 = PointToLineDist(projectedS1C2, ptS2, ptE2);
-	//float dist4 = PointToLineDist(projectedE1C2, ptS2, ptE2);
-
-	//Mat matArray[] = { point3DS1.t() , point3DE1.t(), point3DS2.t(), point3DE2.t() };
-	//Mat endPts;
-	//cv::vconcat(matArray, 4, endPts);
-
-	//
-	//line3dInit->SetPluckerWorld(triangulated_line);
-	//line3dInit->SetEndPts(endPts);
 	return true;
 }
 
@@ -744,61 +701,81 @@ void LineMapping::TestVisualization(vector<ORB_SLAM2::KeyFrame*> vpKFS, string &
 	for (vector<ORB_SLAM2::KeyFrame*>::iterator vit = vpKFS.begin(), vend = vpKFS.end(); vit != vend; vit++) {
 		KeyFrame *pKF = (*vit);
 		vector<Line3d*> vline3ds = pKF->Get3DLines();
-		string imgName = imgDir + "/" + vstrImageFilenames[pKF->mnFrameId];
 
-		Mat Tcw = pKF->GetPose();
-		Mat Ocw = pKF->GetCameraCenter();
-		Mat Rcw = pKF->GetRotation();
-		Mat t = pKF->GetTranslation();
-		Mat Twc = Tcw.inv();
 		
 		for (vector<Line3d*>::iterator l3dit = vline3ds.begin(), l3dend = vline3ds.end(); l3dit!= l3dend; l3dit++) {
 			Line3d *tmpLine3d = (*l3dit);
+
 			if (!tmpLine3d)
 				continue;
 			int n2dLineIdx = tmpLine3d->GetIndexInKeyFrame(pKF);
 			if (n2dLineIdx < 0)
 				continue;
-			
-			Mat correct2Dline = pKF->Get2DLine(n2dLineIdx);
 
-			Mat tmpPlucker = tmpLine3d->GetPluckerWorld();
-			Mat n_w = tmpPlucker.rowRange(0, 3);
-			Mat d_w = tmpPlucker.rowRange(3, 6);
-			Mat n_c = Rcw * n_w + (SkewSymMat(t)*Rcw) * d_w;
-			Mat projectedL2d = lK * n_c;
+			map<KeyFrame*, size_t> tmpObs = tmpLine3d->GetObservations();
 
-			Mat endpts = tmpLine3d->GetEndPts();
-			Mat spt = endpts.row(0);
-			Mat ept = endpts.row(1);
+			for (map<KeyFrame*, size_t>::iterator mobsit = tmpObs.begin(), mobsend = tmpObs.end(); mobsit != mobsend; mobsit++) {
 
-			float l1 = projectedL2d.at<float>(0);
-			float l2 = projectedL2d.at<float>(1);
-			float l3 = projectedL2d.at<float>(2);
-
-			Mat im = imread(imgName);
-
-			Mat left_end = (Mat_<float>(2, 1, CV_32F) << 0, -l3 / l2);
-			Mat right_end = (Mat_<float>(2, 1, CV_32F) << im.cols, -(l1 * im.cols + l3) / l2);
+				KeyFrame* ptmpKF = mobsit->first;
+				int ntmpIdx = mobsit->second;
+				string imgName = imgDir + "/" + vstrImageFilenames[ptmpKF->mnFrameId];
 
 
-			srand(time(NULL));
-			int rand1 = rand() % (255 + 1);
-			int rand2 = rand() % (255 + 1);
-			int rand3 = rand() % (255 + 1);
-			line(im, Point(left_end.at<float>(0), left_end.at<float>(1)), Point(right_end.at<float>(0), right_end.at<float>(1)), Scalar(0, 0, 255), 2);
-			line(im, Point(correct2Dline.at<float>(0), correct2Dline.at<float>(1)), Point(correct2Dline.at<float>(2), correct2Dline.at<float>(3)), Scalar(0, 255, 0), 2);
+				Mat Tcw = ptmpKF->GetPose();
+				Mat Ocw = ptmpKF->GetCameraCenter();
+				Mat Rcw = ptmpKF->GetRotation();
+				Mat t = ptmpKF->GetTranslation();
+				Mat Twc = Tcw.inv();
+
+				Mat correct2Dline = ptmpKF->Get2DLine(ntmpIdx);
+
+				Mat tmpPlucker = tmpLine3d->GetPluckerWorld();
+				Mat n_w = tmpPlucker.rowRange(0, 3);
+				Mat d_w = tmpPlucker.rowRange(3, 6);
+				Mat n_c = Rcw * n_w + (SkewSymMat(t)*Rcw) * d_w;
+				Mat projectedL2d = lK * n_c;
+
+				Mat endpts = tmpLine3d->GetEndPts();
+				Mat spt = endpts.row(0);
+				Mat ept = endpts.row(1);
+
+				float l1 = projectedL2d.at<float>(0);
+				float l2 = projectedL2d.at<float>(1);
+				float l3 = projectedL2d.at<float>(2);
+
+				Mat im = imread(imgName);
+
+				Mat left_end = (Mat_<float>(2, 1, CV_32F) << 0, -l3 / l2);
+				Mat right_end = (Mat_<float>(2, 1, CV_32F) << im.cols, -(l1 * im.cols + l3) / l2);
+
+				srand(time(NULL));
+				int rand1 = rand() % (255 + 1);
+				int rand2 = rand() % (255 + 1);
+				int rand3 = rand() % (255 + 1);
+				line(im, Point(left_end.at<float>(0), left_end.at<float>(1)), Point(right_end.at<float>(0), right_end.at<float>(1)), Scalar(0, 0, 255), 2);
+				line(im, Point(correct2Dline.at<float>(0), correct2Dline.at<float>(1)), Point(correct2Dline.at<float>(2), correct2Dline.at<float>(3)), Scalar(0, 255, 0), 2);
+				std::stringstream ss;
+				ss << "image_" << (ptmpKF->mnFrameId + 1) << ".jpg";
+				imshow(ss.str(), im);
+			}
+
 			/*line(im, Point(left_end.at<float>(0), left_end.at<float>(1)), Point(right_end.at<float>(0), right_end.at<float>(1)), Scalar(rand1, rand2, rand3), 2);
 			line(im, Point(correct2Dline.at<float>(1), correct2Dline.at<float>(0)), Point(correct2Dline.at<float>(3), correct2Dline.at<float>(2)), Scalar(rand1, rand2, rand3), 2);*/
-			imshow("image", im);
 			waitKey(0);
-
-			cout << "left_end" << left_end << endl;
-			cout << "right_end" << right_end << endl;
-			cout << "correct2Dline" << correct2Dline << endl;
+			destroyAllWindows();
+			//cout << "left_end" << left_end << endl;
+			//cout << "right_end" << right_end << endl;
+			//cout << "correct2Dline" << correct2Dline << endl;
 			cout << endl;
 		}
 	}
+}
+
+// Set line registration option;
+void LineMapping::SetOptions(bool isLineRegisterInitDone, bool isLineRANSACInitDone, bool isLSD) {
+	mbIsLineRegisterInit = isLineRegisterInitDone;
+	mbIsLineRANSACInit = isLineRANSACInitDone;
+	mbIsLSD = isLSD;
 }
 
 int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrImageFilenames, string &writeKFinfo, string &imgDir) {
@@ -806,16 +783,11 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	ORB_SLAM2::Map* _mpMap = SLAM.GetMap();
 	vector<ORB_SLAM2::KeyFrame*> vpKFS = _mpMap->GetAllKeyFrames();
 
-	// You may change it.
-	bool isLineRegisterInitDone = false;
-	bool isLineRANSACInitDone = false;
-	bool isLSD = true;
-
 	// Don't change. 
 	bool isProvidedLines = true;
 	bool isPrecomputedF = true;
 
-	if (!isLineRegisterInitDone) {
+	if (mbIsLineRegisterInit) {
 
 		vector<int> vKFindices;
 		vKFindices.reserve(vpKFS.size());
@@ -844,7 +816,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			Mat lines;
 			ORB_SLAM2::KeyFrame* pCurrentKF = *vit;
 			
-			if (!isLSD) {
+			if (!mbIsLSD) {
 				// Load provided lines from txt file. 
 				string strLineName = imgDir + "/results/" + to_string(pCurrentKF->mnFrameId + 1) + "_lines.txt";
 				char* lineName = &strLineName[0];
@@ -880,7 +852,9 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			//}
 
 			// Perform triangulation only for co-visible keyframes. 
+			/*******To do : change for colmap.. for now use all the frames ***************/
 			vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(15);
+			//vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(vpKFS.size());
 
 			// If covisibility graph is empty, do exhaustive search.
 			if (vCovisibleKFs.empty()) {
@@ -894,6 +868,14 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			// Starts from farthest frame
 			for (vector<ORB_SLAM2::KeyFrame*>::reverse_iterator vTmpit = vCovisibleKFs.rbegin(); vTmpit != vCovisibleKFs.rend(); ++vTmpit) {
 				ORB_SLAM2::KeyFrame* pTmpKF = *vTmpit;
+
+				if (pCurrentKF->mnFrameId == pTmpKF->mnFrameId) {
+					continue;
+				}
+
+				//if (pCurrentKF->mnFrameId != 24 || pTmpKF->mnFrameId != 6) {
+				//	continue;
+				//}
 
 				// If it's already processed, pass. 
 				if (find(vDoneIdx.begin(), vDoneIdx.end(), pTmpKF->mnFrameId) != vDoneIdx.end())
@@ -918,10 +900,37 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 				// matchedLines has a form of  (ps1.x, ps1.y, pe1.x, pe1.y, ps2.x, ps2.y, pe2.x, pe2.y)xN rows.
 				if (isPrecomputedF)
 					lineMatching->setFmat(Fmat);
-				pair<Mat*, Mat*> mLines = lineMatching->lsm();
+				pair<Mat*, Mat*> matchedLineInfo, matchedJunctionInfo;
+				lineMatching->lsm(matchedLineInfo, matchedJunctionInfo);
 
-				int nCreatedLines = TwoViewTriangulation(mLines, K, invK, pCurrentKF, pTmpKF, _mpMap);
-				//int nCreatedLines = CollectObservations(mLines, K, invK, pCurrentKF, pTmpKF, _mpMap);
+				// Save Junction information.
+				Mat* matchedLines = matchedLineInfo.first;
+				Mat* matchedLineIndices = matchedLineInfo.second;
+				Mat* matchedJunctions = matchedJunctionInfo.first;
+				Mat* matchedJunctionIndices = matchedJunctionInfo.second;
+
+				int nMatchedLines = matchedLines->rows;
+				int nJunctions = matchedJunctions->rows;
+
+				if (nMatchedLines == 0 || nJunctions == 0)
+					continue;
+
+				for (int njunctionidx = 0; njunctionidx < nJunctions; njunctionidx++) {
+					// For every created juntions, add it to related 2D lines.
+					int img1LineIdx1 = matchedJunctionIndices->at<int>(njunctionidx, 0);
+					int img1LineIdx2 = matchedJunctionIndices->at<int>(njunctionidx, 1);
+					int img2LineIdx1 = matchedJunctionIndices->at<int>(njunctionidx, 2);
+					int img2LineIdx2 = matchedJunctionIndices->at<int>(njunctionidx, 3);
+
+					JunctionPair *newJP = new JunctionPair(pCurrentKF, pTmpKF, img1LineIdx1, img1LineIdx2, img2LineIdx1, img2LineIdx2);
+
+					pCurrentKF->AddJunction2d(img1LineIdx1, img1LineIdx2, newJP);
+					pTmpKF->AddJunction2d(img2LineIdx1, img2LineIdx2, newJP);
+				}
+
+
+				int nCreatedLines = TwoViewTriangulation(matchedLineInfo, K, invK, pCurrentKF, pTmpKF, _mpMap);
+				//int nCreatedLines = CollectObservations(matchedLines, K, invK, pCurrentKF, pTmpKF, _mpMap);
 
 				totalNlines += nCreatedLines;
 				cout << "************* " << nCreatedLines << " lines have newly created.. || Total created lines so far : " << totalNlines << " *************\n" << endl;
@@ -952,7 +961,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	/************Search proper inital line parameter via RANSAC *****************************/
 	cout << "----Initializing lines via RANSAC.. ----" << endl;
 	int save_mode = 0;
-	if (!isLineRANSACInitDone) {
+	if (mbIsLineRANSACInit) {
 		// Save the map before optimization. 
 		save_mode = 1; // SAVE_MODE : ONLY_MAP(0), LINE_MAP_NOT_OPT(1), LINE_MAP_OPT(2)
 		SLAM.SaveMap(save_mode);
@@ -991,27 +1000,6 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
 		pLine->UpdateEndpts();
 	}
-
-	/*for (vector<ORB_SLAM2::KeyFrame*>::iterator vit = vpKFS.begin(), vend = vpKFS.end(); vit != vend; vit++) {
-		cout << "Optimization : " << count2 << " / " << vpKFS.size() << " KeyFrames has done. " << endl;
-		count2++;
-
-		KeyFrame* pUnOptKF = (*vit);
-		vector<Line3d*> lines = pUnOptKF->Get3DLines();
-		for (vector<ORB_SLAM2::Line3d*>::iterator vit = lines.begin(), vend = lines.end(); vit != vend; vit++) {
-			Line3d* pLine = *vit;
-			if (!pLine)
-				continue;
-			if (pLine->GetNumObservations() < 5) {
-				cout << "Erased!" << endl;
-				_mpMap->EraseLine3d(pLine);
-				pUnOptKF->EraseLine3dMatch(pLine);
-				continue;
-			}
-			ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
-			pLine->UpdateEndpts();
-		}
-	}*/
 
 	cout << "----Optimization done." << endl;
 	numberLinesBefore = (_mpMap->GetLine3ds()).size();
