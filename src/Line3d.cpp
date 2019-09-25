@@ -95,7 +95,6 @@ namespace ORB_SLAM2 {
 		newEndpt2.copyTo(mEndPts.row(1).colRange(0, 3));
 	}
 
-
 	cv::Mat Line3d::ClosestPointfromOrigin() {
 		cv::Mat p_ortho;
 		if (mPlucker.empty()) {
@@ -169,6 +168,16 @@ namespace ORB_SLAM2 {
 			return -sqrt(mag);
 
 
+	}
+
+	// Add Coplanar lines.
+	void Line3d::AddCoplanarLine3d(Line3d* pLine3d) {
+		mvCoplanarLine3ds.push_back(pLine3d);
+	}
+
+	// Get all of the Coplanar lines.
+	vector<Line3d*> Line3d::GetCoplanarLine3d() {
+		return mvCoplanarLine3ds;
 	}
 
 #ifdef FUNC_MAP_SAVE_LOAD

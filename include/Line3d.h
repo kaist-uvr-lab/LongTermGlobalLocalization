@@ -50,6 +50,13 @@ namespace ORB_SLAM2 {
 		// Erase given KF from the observation of Line3d.
 		void EraseObservation(KeyFrame* pKF);
 
+		// Add Coplanar lines.
+		void AddCoplanarLine3d(Line3d* pLine3d);
+
+		// Get all of the Coplanar lines.
+		vector<Line3d*> GetCoplanarLine3d();
+
+
 	private:
 		// Position in plucker coordinate & world coordinate
 		cv::Mat mPlucker, mEndPts;
@@ -62,6 +69,12 @@ namespace ORB_SLAM2 {
 
 		// number of observed Keyframes
 		int nObs;
+
+		// coplanar lines
+		vector<Line3d*> mvCoplanarLine3ds;
+
+		// number of coplanar lines
+		int nCoPlanarLine3ds;
 
 #ifdef FUNC_MAP_SAVE_LOAD
 	public:

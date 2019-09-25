@@ -476,7 +476,13 @@ void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap){
 
 			// If it includes only two observation, erase it due to its instability. 
 			if (nObs < 3) {
-				_mpMap->EraseLine3d(pCurrentLine3d);
+				_mpMap->EraseLine3d(pCurrentLine3d);				
+				map<KeyFrame*, size_t> tmpObs = pCurrentLine3d->GetObservations();
+				for (map<KeyFrame*, size_t>::iterator mObsIt = tmpObs.begin(), mObsEnd = tmpObs.end(); mObsIt != mObsEnd; mObsIt++) {
+					KeyFrame* pTmpKF = mObsIt->first;
+					pTmpKF->EraseLine3dMatch(pCurrentLine3d);
+				}
+
 				continue;
 			}
 
@@ -818,7 +824,8 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			
 			if (!mbIsLSD) {
 				// Load provided lines from txt file. 
-				string strLineName = imgDir + "/results/" + to_string(pCurrentKF->mnFrameId + 1) + "_lines.txt";
+				//string strLineName = imgDir + "/results/" + to_string(pCurrentKF->mnFrameId + 1) + "_lines.txt";
+				string strLineName = imgDir + "/result_wireframe/" + to_string(pCurrentKF->mnFrameId + 1) + "_lines.txt";
 				char* lineName = &strLineName[0];
 				io.loadData(lineName, lines);
 			}
@@ -853,8 +860,8 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 
 			// Perform triangulation only for co-visible keyframes. 
 			/*******To do : change for colmap.. for now use all the frames ***************/
-			vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(15);
-			//vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(vpKFS.size());
+			//vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(15);
+			vector<ORB_SLAM2::KeyFrame*> vCovisibleKFs = pCurrentKF->GetBestCovisibilityKeyFrames(vpKFS.size());
 
 			// If covisibility graph is empty, do exhaustive search.
 			if (vCovisibleKFs.empty()) {
