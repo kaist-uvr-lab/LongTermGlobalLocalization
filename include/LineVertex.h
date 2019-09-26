@@ -72,6 +72,21 @@ namespace g2o {
 
 	};
 
+	class LineJunctionOptimizationEdge : public BaseBinaryEdge<1, double, LineVertex, LineVertex> {
+	public:
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+			LineJunctionOptimizationEdge();
+		bool read(std::istream& is);
+
+		bool write(std::ostream& os) const;
+
+		void computeError();
+		virtual void linearizeOplus();
+
+		Matrix3d SKEW(Vector3d src);
+	};
+
 } // namespace ORB_SLAM
 
 #endif // LINEVERTEX_H

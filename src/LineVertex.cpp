@@ -237,4 +237,111 @@ namespace  g2o {
 		return res;
 
 	}
+
+
+
+	LineJunctionOptimizationEdge::LineJunctionOptimizationEdge() :BaseBinaryEdge<1, double, LineVertex, LineVertex>() {
+	}
+	bool LineJunctionOptimizationEdge::read(std::istream& is) {
+		return true;
+	}
+	bool LineJunctionOptimizationEdge::write(std::ostream& os)const {
+		return true;
+	}
+	void LineJunctionOptimizationEdge::computeError() {
+		const LineVertex* v1 = static_cast<const LineVertex*>(_vertices[0]);
+		const LineVertex* v2 = static_cast<const LineVertex*>(_vertices[1]);
+
+		Vector4d param1 = v1->estimate();
+		Vector6d Lw1 = LineConverter::ConvertPlukerCoordinates(param1);
+
+		Vector4d param2 = v2->estimate();
+		Vector6d Lw2 = LineConverter::ConvertPlukerCoordinates(param2);
+
+		Vector3d Nw1 = Lw1.head(3);
+		Vector3d Dw1 = Lw1.tail(3);
+
+		Vector3d Nw2 = Lw2.head(3);
+		Vector3d Dw2 = Lw2.tail(3);
+
+		Vector3d tempCross = Dw1.cross(Dw2);
+		_error[0] = (Nw1.dot(Dw2) + Nw2.dot(Dw1)) / tempCross.norm();
+
+	}
+	void LineJunctionOptimizationEdge::linearizeOplus() {
+		const LineVertex* v1 = static_cast<const LineVertex*>(_vertices[0]);
+		const LineVertex* v2 = static_cast<const LineVertex*>(_vertices[1]);
+
+		////U & W
+		Matrix3d U1 = LineConverter::ConvertRotationMatrixFromEulerAngles(v1->estimate().head(3));
+		Matrix3d U2 = LineConverter::ConvertRotationMatrixFromEulerAngles(v2->estimate().head(3));
+
+		double w11, w12;
+		LineConverter::CalcTheta(v1->estimate()[3], w11, w12);
+		double w21, w22;
+		LineConverter::CalcTheta(v2->estimate()[3], w21, w22);
+
+		//L, N, D
+		Vector4d param1 = v1->estimate();
+		Vector6d Lw1 = LineConverter::ConvertPlukerCoordinates(param1);
+
+		Vector4d param2 = v2->estimate();
+		Vector6d Lw2 = LineConverter::ConvertPlukerCoordinates(param2);
+
+		Vector3d Nw1 = Lw1.head(3);
+		Vector3d Dw1 = Lw1.tail(3);
+
+		Vector3d Nw2 = Lw2.head(3);
+		Vector3d Dw2 = Lw2.tail(3);
+
+		Vector3d S = SKEW(Dw1)*Dw2;
+		double K = S.norm();
+		double K3 = K*K*K;
+		double A = Dw1.dot(Nw2) + Dw2.dot(Nw1);
+
+		//Jacobian Lw/Lo
+		MatrixXd JLw1 = MatrixXd::Zero(6, 4);
+		JLw1.block<3, 1>(0, 1) = -w11*U1.col(2);
+		JLw1.block<3, 1>(0, 2) = w11*U1.col(1);
+		JLw1.block<3, 1>(0, 3) = -w12*U1.col(0);
+		JLw1.block<3, 1>(3, 0) = w12*U1.col(2);
+		JLw1.block<3, 1>(3, 2) = -w12*U1.col(0);
+		JLw1.block<3, 1>(3, 3) = w11*U1.col(1);
+
+		MatrixXd JLw2 = MatrixXd::Zero(6, 4);
+		JLw2.block<3, 1>(0, 1) = -w21*U2.col(2);
+		JLw2.block<3, 1>(0, 2) = w21*U2.col(1);
+		JLw2.block<3, 1>(0, 3) = -w22*U2.col(0);
+		JLw2.block<3, 1>(3, 0) = w22*U2.col(2);
+		JLw2.block<3, 1>(3, 2) = -w22*U2.col(0);
+		JLw2.block<3, 1>(3, 3) = w21*U2.col(1);
+
+		//Jacobian Lr/Lw
+		Vector6d Jr1 = Vector6d::Zero();
+		Jr1[0] = Nw2[0] / K + (S(1) * Dw2(2) - S(2)*Dw2(1))*A / K3;
+		Jr1[1] = Nw2[1] / K + (S(2) * Dw2(0) - S(0)*Dw2(2))*A / K3;
+		Jr1[2] = Nw2[2] / K + (S(0) * Dw2(1) - S(1)*Dw2(0))*A / K3;
+		Jr1[3] = Dw2(0) / K;
+		Jr1[4] = Dw2(1) / K;
+		Jr1[5] = Dw2(2) / K;
+
+		Vector6d Jr2 = Vector6d::Zero();
+		Jr2[0] = Nw1[0] / K + (-S(1) * Dw1(2) + S(2)*Dw1(1))*A / K3;
+		Jr2[1] = Nw1[1] / K + (-S(2) * Dw1(0) + S(0)*Dw1(2))*A / K3;
+		Jr2[2] = Nw1[2] / K + (-S(0) * Dw1(1) + S(1)*Dw1(0))*A / K3;
+		Jr2[3] = Dw1(0) / K;
+		Jr2[4] = Dw1(1) / K;
+		Jr2[5] = Dw1(2) / K;
+
+		//Jacobian Lr/Lo
+		_jacobianOplusXi = Jr1.transpose()*JLw1;
+		_jacobianOplusXj = Jr2.transpose()*JLw2;
+
+	}
+
+	Matrix3d LineJunctionOptimizationEdge::SKEW(Vector3d src) {
+		Matrix3d res = Matrix3d(3, 3);
+		res << 0, -src[2], src[1], src[2], 0, -src[0], -src[1], src[0], 0;
+		return res;
+	}
 }

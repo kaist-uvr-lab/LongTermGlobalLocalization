@@ -186,7 +186,8 @@ namespace g2o {
   typedef BlockSolver< BlockSolverTraits<3, 2> > BlockSolver_3_2;
   //LINE optimization
   typedef BlockSolver< BlockSolverTraits<4, 2> > BlockSolver_4_2;
-
+  //LINE Junction optimization
+  typedef BlockSolver< BlockSolverTraits<4, 4> > BlockSolver_4_4;
 } // end namespace
 
 #include "block_solver.hpp"
