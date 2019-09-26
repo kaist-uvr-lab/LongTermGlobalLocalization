@@ -37,10 +37,10 @@ public:
 	cv::Mat ComputeFMatrix(const cv::Mat &_T, const cv::Mat &_K);
 
 	// Two View Triangulation.
-	int TwoViewTriangulation(pair<cv::Mat*, cv::Mat*> _pairLines, const cv::Mat &_K, const cv::Mat &_invK, KeyFrame *_pKF1, KeyFrame *_pKF2, Map *_pMap);
+	int TwoViewTriangulation(pair<cv::Mat*, cv::Mat*> _pairLines, pair<cv::Mat*, cv::Mat*> _pairJunctions, const cv::Mat &_K, const cv::Mat &_invK, KeyFrame *_pKF1, KeyFrame *_pKF2, Map *_pMap);
 
 	// Add only Observations.
-	int CollectObservations(pair<cv::Mat*, cv::Mat*> _pairLines, const cv::Mat &_K, const cv::Mat &_invK, KeyFrame *_pKF1, KeyFrame *_pKF2, Map *_pMap);
+	int CollectObservations(pair<cv::Mat*, cv::Mat*> _pairLines, pair<cv::Mat*, cv::Mat*> _pairJunctions, const cv::Mat &_K, const cv::Mat &_invK, KeyFrame *_pKF1, KeyFrame *_pKF2, Map *_pMap);
 
 	// Initialize the line parameter via RANSAC.
 	void InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap);

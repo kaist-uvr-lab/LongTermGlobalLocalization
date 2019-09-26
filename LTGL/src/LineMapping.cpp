@@ -241,21 +241,48 @@ cv::Mat LineMapping::ComputeFMatrix(const cv::Mat &_T, const cv::Mat &_K){
 }
 
 
-int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, const Mat &_K, const Mat &_invK, KeyFrame *_pKF1, KeyFrame *_pKF2, Map *_pMap) {
+int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, pair<Mat*, Mat*> _pairJunctions, const Mat &_K, const Mat &_invK, KeyFrame *_pKF1, KeyFrame *_pKF2, Map *_pMap) {
 	
 	int nCreatedLines = 0;
 	Mat K = _K;
 	Mat invK = _invK;
 
+	// Load matched line information.
 	Mat* matchedLines = _pairLines.first;
 	Mat* matchedLineIndices = _pairLines.second;
-
 	int nMatchedLines = matchedLines->rows;
 
 	if (nMatchedLines == 0) {
 		cout << "Pass triangulation" << endl;
 	}
 
+	// Load Junction information.
+	Mat* matchedJunctions = _pairJunctions.first;
+	Mat* matchedJunctionIndices = _pairJunctions.second;
+	int nJunctions = matchedJunctions->rows;
+
+	// variables for saving junction information for Frame1, Frame2.
+	map<size_t, vector<size_t>> mnvlineJunction1, mnvlineJunction2;
+
+	for (int njunctionidx = 0; njunctionidx < nJunctions; njunctionidx++) {
+		// For every created juntions, add it to related 2D lines.
+		size_t img1LineIdx1 = matchedJunctionIndices->at<int>(njunctionidx, 0);
+		size_t img1LineIdx2 = matchedJunctionIndices->at<int>(njunctionidx, 1);
+		size_t img2LineIdx1 = matchedJunctionIndices->at<int>(njunctionidx, 2);
+		size_t img2LineIdx2 = matchedJunctionIndices->at<int>(njunctionidx, 3);
+
+		mnvlineJunction1[img1LineIdx1].push_back(img1LineIdx2);
+		mnvlineJunction1[img1LineIdx2].push_back(img1LineIdx1);
+
+		mnvlineJunction2[img2LineIdx1].push_back(img2LineIdx2);
+		mnvlineJunction2[img2LineIdx2].push_back(img2LineIdx1);
+	
+		JunctionPair *newJP = new JunctionPair(_pKF1, _pKF2, img1LineIdx1, img1LineIdx2, img2LineIdx1, img2LineIdx2);
+
+		_pKF1->AddJunction2d(img1LineIdx1, img1LineIdx2, newJP);
+		_pKF2->AddJunction2d(img2LineIdx1, img2LineIdx2, newJP);
+	}
+	
 	// First get Plucker Coordinates of triangulated lines.  
 	Mat Ocw1 = _pKF1->GetCameraCenter();
 	Mat Ocw2 = _pKF2->GetCameraCenter();
@@ -269,9 +296,12 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, const Mat &_K
 	for (int i = 0; i < nMatchedLines; i++) {
 		Mat matchedPts = matchedLines->row(i);
 
+		size_t nLineIdx1 = matchedLineIndices->at<int>(i, 0);
+		size_t nLineIdx2 = matchedLineIndices->at<int>(i, 1);
+
 		// If 3D line has already registered, pass it. 
-		Line3d *pLine3d1 = _pKF1->Get3DLine(matchedLineIndices->at<int>(i, 0));
-		Line3d *pLine3d2 = _pKF2->Get3DLine(matchedLineIndices->at<int>(i, 1));
+		Line3d *pLine3d1 = _pKF1->Get3DLine(nLineIdx1);
+		Line3d *pLine3d2 = _pKF2->Get3DLine(nLineIdx2);
 
 		// Instead of Fuse process, we simply add observation if the line is already registered. 
 		if (pLine3d1) {
@@ -281,16 +311,16 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, const Mat &_K
 			}
 			else {
 				// Line1 is already registered so only add observation for Line2. 
-				pLine3d1->AddObservation(_pKF2, matchedLineIndices->at<int>(i, 1));
-				_pKF2->AddLine3D(pLine3d1, matchedLineIndices->at<int>(i, 1));
+				pLine3d1->AddObservation(_pKF2, nLineIdx2);
+				_pKF2->AddLine3D(pLine3d1, nLineIdx2);
 				continue;
 			}
 		}
 		else {
 			if (pLine3d2) {
 				// Line2 is already registered so only add observation for Line1. 
-				pLine3d2->AddObservation(_pKF1, matchedLineIndices->at<int>(i, 0));
-				_pKF1->AddLine3D(pLine3d2, matchedLineIndices->at<int>(i, 0));
+				pLine3d2->AddObservation(_pKF1, nLineIdx1);
+				_pKF1->AddLine3D(pLine3d2, nLineIdx1);
 				continue;
 			}
 		}
@@ -384,11 +414,14 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, const Mat &_K
 		cv::vconcat(matArray, 4, endPts);
 
 		ORB_SLAM2::Line3d *newLine = new ORB_SLAM2::Line3d(triangulated_line, endPts, _pMap);
-		newLine->AddObservation(_pKF1, matchedLineIndices->at<int>(i, 0));
-		newLine->AddObservation(_pKF2, matchedLineIndices->at<int>(i, 1));
+		newLine->AddObservation(_pKF1, nLineIdx1);
+		newLine->AddObservation(_pKF2, nLineIdx2);
+		//Add coplanar information.
+		newLine->AddCPObservation(_pKF1, mnvlineJunction1[nLineIdx1]);
+		newLine->AddCPObservation(_pKF2, mnvlineJunction2[nLineIdx2]);
 
-		_pKF1->AddLine3D(newLine, matchedLineIndices->at<int>(i, 0));
-		_pKF2->AddLine3D(newLine, matchedLineIndices->at<int>(i, 1));
+		_pKF1->AddLine3D(newLine, nLineIdx1);
+		_pKF2->AddLine3D(newLine, nLineIdx2);
 
 		_pMap->AddLine3d(newLine);
 		nCreatedLines++;
@@ -397,7 +430,7 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, const Mat &_K
 	return nCreatedLines;
 }
 
-int LineMapping::CollectObservations(pair<Mat*, Mat*> _pairLines, const Mat &_K, const Mat &_invK, KeyFrame *_pKF1, KeyFrame *_pKF2, Map *_pMap) {
+int LineMapping::CollectObservations(pair<Mat*, Mat*> _pairLines, pair<Mat*, Mat*> _pairJunctions, const Mat &_K, const Mat &_invK, KeyFrame *_pKF1, KeyFrame *_pKF2, Map *_pMap) {
 
 	int nCreatedLines = 0;
 	Mat* matchedLines = _pairLines.first;
@@ -936,7 +969,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 				}
 
 
-				int nCreatedLines = TwoViewTriangulation(matchedLineInfo, K, invK, pCurrentKF, pTmpKF, _mpMap);
+				int nCreatedLines = TwoViewTriangulation(matchedLineInfo, matchedJunctionInfo, K, invK, pCurrentKF, pTmpKF, _mpMap);
 				//int nCreatedLines = CollectObservations(matchedLines, K, invK, pCurrentKF, pTmpKF, _mpMap);
 
 				totalNlines += nCreatedLines;

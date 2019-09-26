@@ -14,7 +14,6 @@ namespace ORB_SLAM2 {
 		mLineObservations[pKF] = idx;
 		nObs++;
 	}
-
 	void Line3d::EraseObservation(KeyFrame* pKF)
 	{
 		bool bBad = false;
@@ -31,6 +30,43 @@ namespace ORB_SLAM2 {
 			}
 		}
 	}
+	
+	void Line3d::AddCPObservation(KeyFrame* pKF, vector<size_t> vIndices)
+	{
+		vector<size_t> vtmpIdx = mCPLineObservations[pKF];
+		for (vector<size_t>::iterator vit = vIndices.begin(), vend = vIndices.end(); vit != vend; vit++) {
+			if (vtmpIdx.end() != find(vtmpIdx.begin(), vtmpIdx.end(), *vit))
+				return;
+			mCPLineObservations[pKF].push_back(*vit);
+		}
+	}
+
+	void Line3d::EraseCPObservation(KeyFrame* pKF, size_t idx)
+	{
+		vector<size_t> vtmpIdx = mCPLineObservations[pKF];
+		vector<size_t>::iterator findIdx = find(vtmpIdx.begin(), vtmpIdx.end(), idx);
+		if (findIdx != vtmpIdx.end()) {
+			mCPLineObservations[pKF].erase(findIdx);
+		}
+	}
+
+	void Line3d::UpdateCoplanarLine3d(Map* pMap) {
+		// For all observations, gather coplanar 2d lines and finally update coplanar 3d lines. 
+		for (map<KeyFrame*, size_t>::iterator mit = mLineObservations.begin(), mend = mLineObservations.end(); mit != mend; mit++) {
+			KeyFrame* pTmpKF = mit->first;
+			size_t sTmpIdx = mit->second;
+
+			vector<size_t> vCPLineObervation = mCPLineObservations[pTmpKF];
+			for (vector<size_t>::iterator vit = vCPLineObervation.begin(), vend = vCPLineObervation.end(); vit != vend; vit++) {
+				Line3d *pTmpLine3d = pTmpKF->Get3DLine(*vit);
+				if (!pTmpLine3d)
+					continue;
+				
+				AddCoplanarLine3d(pTmpLine3d);
+			}
+		}
+	}
+
 	void Line3d::UpdateEndpts() {
 		//Update all of the endpts. 
 		cv::Mat tmpAllEndpts;
@@ -172,7 +208,10 @@ namespace ORB_SLAM2 {
 
 	// Add Coplanar lines.
 	void Line3d::AddCoplanarLine3d(Line3d* pLine3d) {
-		mvCoplanarLine3ds.push_back(pLine3d);
+		vector<Line3d*>::iterator vitTmpIdx = find(mvCoplanarLine3ds.begin(), mvCoplanarLine3ds.end(), pLine3d);
+
+		if(vitTmpIdx == mvCoplanarLine3ds.end())
+			mvCoplanarLine3ds.push_back(pLine3d);
 	}
 
 	// Get all of the Coplanar lines.

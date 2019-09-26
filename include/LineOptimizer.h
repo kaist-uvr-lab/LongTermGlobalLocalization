@@ -23,7 +23,7 @@ namespace ORB_SLAM2 {
 			//Line
 
 			g2o::SparseOptimizer optimizer;
-			g2o::BlockSolver_4_4::LinearSolverType * linearSolver;
+			g2o::BlockSolver_4_4::LinearSolverType *linearSolver;
 			linearSolver = new g2o::LinearSolverDense<g2o::BlockSolver_4_4::PoseMatrixType>();
 			g2o::BlockSolver_4_4 * solver_ptr = new g2o::BlockSolver_4_4(linearSolver);
 			g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(solver_ptr);
