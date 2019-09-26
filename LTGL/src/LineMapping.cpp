@@ -262,7 +262,7 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, pair<Mat*, Ma
 	int nJunctions = matchedJunctions->rows;
 
 	// variables for saving junction information for Frame1, Frame2.
-	map<size_t, vector<size_t>> mnvlineJunction1, mnvlineJunction2;
+	map<size_t, set<size_t>> mnslineJunction1, mnslineJunction2;
 
 	for (int njunctionidx = 0; njunctionidx < nJunctions; njunctionidx++) {
 		// For every created juntions, add it to related 2D lines.
@@ -271,11 +271,11 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, pair<Mat*, Ma
 		size_t img2LineIdx1 = matchedJunctionIndices->at<int>(njunctionidx, 2);
 		size_t img2LineIdx2 = matchedJunctionIndices->at<int>(njunctionidx, 3);
 
-		mnvlineJunction1[img1LineIdx1].push_back(img1LineIdx2);
-		mnvlineJunction1[img1LineIdx2].push_back(img1LineIdx1);
+		mnslineJunction1[img1LineIdx1].insert(img1LineIdx2);
+		mnslineJunction1[img1LineIdx2].insert(img1LineIdx1);
 
-		mnvlineJunction2[img2LineIdx1].push_back(img2LineIdx2);
-		mnvlineJunction2[img2LineIdx2].push_back(img2LineIdx1);
+		mnslineJunction2[img2LineIdx1].insert(img2LineIdx2);
+		mnslineJunction2[img2LineIdx2].insert(img2LineIdx1);
 	
 		JunctionPair *newJP = new JunctionPair(_pKF1, _pKF2, img1LineIdx1, img1LineIdx2, img2LineIdx1, img2LineIdx2);
 
@@ -307,12 +307,21 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, pair<Mat*, Ma
 		if (pLine3d1) {
 			if (pLine3d2) {
 				//both are already registered. 
+				//Add coplanar information.
+				pLine3d1->AddCPObservation(_pKF1, mnslineJunction1[nLineIdx1]);
+				pLine3d1->AddCPObservation(_pKF2, mnslineJunction2[nLineIdx2]);
+				pLine3d2->AddCPObservation(_pKF1, mnslineJunction1[nLineIdx1]);
+				pLine3d2->AddCPObservation(_pKF2, mnslineJunction2[nLineIdx2]);
 				continue;
 			}
 			else {
 				// Line1 is already registered so only add observation for Line2. 
 				pLine3d1->AddObservation(_pKF2, nLineIdx2);
 				_pKF2->AddLine3D(pLine3d1, nLineIdx2);
+
+				//Add coplanar information.
+				pLine3d1->AddCPObservation(_pKF1, mnslineJunction1[nLineIdx1]);
+				pLine3d1->AddCPObservation(_pKF2, mnslineJunction2[nLineIdx2]);
 				continue;
 			}
 		}
@@ -321,6 +330,10 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, pair<Mat*, Ma
 				// Line2 is already registered so only add observation for Line1. 
 				pLine3d2->AddObservation(_pKF1, nLineIdx1);
 				_pKF1->AddLine3D(pLine3d2, nLineIdx1);
+
+				//Add coplanar information.
+				pLine3d2->AddCPObservation(_pKF1, mnslineJunction1[nLineIdx1]);
+				pLine3d2->AddCPObservation(_pKF2, mnslineJunction2[nLineIdx2]);
 				continue;
 			}
 		}
@@ -416,9 +429,10 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, pair<Mat*, Ma
 		ORB_SLAM2::Line3d *newLine = new ORB_SLAM2::Line3d(triangulated_line, endPts, _pMap);
 		newLine->AddObservation(_pKF1, nLineIdx1);
 		newLine->AddObservation(_pKF2, nLineIdx2);
+
 		//Add coplanar information.
-		newLine->AddCPObservation(_pKF1, mnvlineJunction1[nLineIdx1]);
-		newLine->AddCPObservation(_pKF2, mnvlineJunction2[nLineIdx2]);
+		newLine->AddCPObservation(_pKF1, mnslineJunction1[nLineIdx1]);
+		newLine->AddCPObservation(_pKF2, mnslineJunction2[nLineIdx2]);
 
 		_pKF1->AddLine3D(newLine, nLineIdx1);
 		_pKF2->AddLine3D(newLine, nLineIdx2);
@@ -589,8 +603,11 @@ void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap){
 
 			//Erase observation for outliers.
 			for (map<KeyFrame*, size_t>::iterator mit = mAllObervations.begin(), mend = mAllObervations.end(); mit != mend; mit++) {
-				if(!finalInlierIdx[mit->first])
+				if (!finalInlierIdx[mit->first]) {
 					pCurrentLine3d->EraseObservation(mit->first);
+					pCurrentLine3d->EraseCPObservation(mit->first, mit->second);
+				}
+					
 			}
 
 		}
@@ -1013,15 +1030,65 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		SLAM.SaveMap(save_mode);
 	}
 	cout << "----Initialization done. ----" << endl;
-
 	cout << "----Optimizing of all the lines----" << endl;
 	cout << "----And Erasing unreliable lines, which include only two observations. -----" << endl;
 	int count2 = 0;
 
+	cout << "----Update coplanar line information using junction Information----" << endl;
 	vector<Line3d*> unOptLines3D = _mpMap->GetLine3ds();
-	int numberLinesBefore = unOptLines3D.size();
-	cout << numberLinesBefore << " of lines were registered before optimization.. " << endl;
+	for (vector<ORB_SLAM2::Line3d*>::iterator vit = unOptLines3D.begin(), vend = unOptLines3D.end(); vit != vend; vit++) {
+		Line3d* pLine = *vit;
+		if (!pLine)
+			continue;
+		pLine->UpdateCoplanarLine3d();
+	}
 
+	cout << "----Erase lines with low observations ----" << endl;
+
+	unOptLines3D = _mpMap->GetLine3ds();
+	int numberLinesBefore = unOptLines3D.size();
+	cout << "----" << numberLinesBefore << " of lines were registered before erase lines with low observations.. " << endl;
+
+	for (vector<ORB_SLAM2::Line3d*>::iterator vit = unOptLines3D.begin(), vend = unOptLines3D.end(); vit != vend; vit++) {
+		Line3d* pLine = *vit;
+		if (!pLine)
+			continue;
+		if (pLine->GetNumObservations() < 5) {
+			cout << "Erased!" << endl;
+			_mpMap->EraseLine3d(pLine);
+
+			// Erase line observations.
+			map<KeyFrame*, size_t> tmpObs = pLine->GetObservations();
+			for (map<KeyFrame*, size_t>::iterator mObsIt = tmpObs.begin(), mObsEnd = tmpObs.end(); mObsIt != mObsEnd; mObsIt++) {
+				KeyFrame* pTmpKF = mObsIt->first;
+				pTmpKF->EraseLine3dMatch(pLine);
+			}
+
+			// Erase Junction observations. 
+			set<Line3d*> sTmpCPLine3ds = pLine->GetCoplanarLine3d();
+			for (set<Line3d*>::iterator sit = sTmpCPLine3ds.begin(), send = sTmpCPLine3ds.end(); sit != send; sit++) {
+				Line3d* pTmpLine = *sit;
+
+				//// Erase 2d junction information.
+				//map<KeyFrame*, set<size_t>> mTmpCPObs = pTmpLine->GetCPLineObservations();
+				//for (map<KeyFrame*, set<size_t>>::iterator mCPLineObit = mTmpCPObs.begin(), mCPLineObend = mTmpCPObs.end(); mCPLineObit != mCPLineObend; mCPLineObit++) {
+				//	KeyFrame *pTmpCPKF = mCPLineObit->first;
+				//	set<size_t> sAllobs = mCPLineObit->second;
+				//	pTmpLine->EraseCPObservation(pTmpCPKF, pLine->GetIndexInKeyFrame(pTmpCPKF));
+				//}
+				
+				// Erase 3d coplanar line information.
+				pTmpLine->EraseCoplanarLine3d(pLine);
+			}
+			continue;
+		}
+		pLine->UpdateEndpts();
+	}
+
+	unOptLines3D = _mpMap->GetLine3ds();
+	numberLinesBefore = unOptLines3D.size();
+	cout << "----" << numberLinesBefore << " of lines were registered before optimization.. " << endl;
+	
 	for (vector<ORB_SLAM2::Line3d*>::iterator vit = unOptLines3D.begin(), vend = unOptLines3D.end(); vit != vend; vit++) {
 		Line3d* pLine = *vit;
 		if (!pLine)
@@ -1041,9 +1108,9 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		pLine->UpdateEndpts();
 	}
 
-	cout << "----Optimization done." << endl;
+	cout << "----Optimization done.\n" << endl;
 	numberLinesBefore = (_mpMap->GetLine3ds()).size();
-	cout << numberLinesBefore << " of lines were left after optimization.. " << endl;
+	cout << "----" << numberLinesBefore << " of lines were left after optimization.. \n" << endl;
 
 	// Save the map after optimization. 
 	save_mode = 2; // SAVE_MODE : ONLY_MAP(0), LINE_MAP_NOT_OPT(1), LINE_MAP_OPT(2)

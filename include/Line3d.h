@@ -51,19 +51,25 @@ namespace ORB_SLAM2 {
 		void EraseObservation(KeyFrame* pKF);
 
 		// Add coplanar line observation for this Line3d.
-		void AddCPObservation(KeyFrame* pKF, vector<size_t> vIndices);
+		void AddCPObservation(KeyFrame* pKF, set<size_t> vIndices);
 
 		// Erase given coplanar line observation from the coplanar observation of this Line3d.
 		void EraseCPObservation(KeyFrame* pKF, size_t idx);
 
-		// Add Coplanar lines.
+		// Get all Coplanar line observations.
+		std::map<KeyFrame*, set<size_t>> GetCPLineObservations();
+
+		// Add Coplanar 3D lines.
 		void AddCoplanarLine3d(Line3d* pLine3d);
 
+		// Erase Coplanar 3D lines. 
+		void EraseCoplanarLine3d(Line3d* pLine3d);
+
 		// Get all of the Coplanar lines.
-		vector<Line3d*> GetCoplanarLine3d();
+		set<Line3d*> GetCoplanarLine3d();
 
 		// Update coplanar line3ds infos. 
-		void UpdateCoplanarLine3d(Map* pMap);
+		void UpdateCoplanarLine3d();
 
 	private:
 		// Position in plucker coordinate & world coordinate
@@ -76,13 +82,13 @@ namespace ORB_SLAM2 {
 		int nObs;
 
 		// Keyframes observing the coplanar line and associated index in keyframe
-		std::map<KeyFrame*, vector<size_t>> mCPLineObservations;
+		std::map<KeyFrame*, set<size_t>> mCPLineObservations;
 
 		// Reference KeyFrame
 		Map* mpMap;
 
 		// coplanar lines
-		vector<Line3d*> mvCoplanarLine3ds;
+		set<Line3d*> msCoplanarLine3ds;
 
 		// number of coplanar lines
 		int nCoPlanarLine3ds;
