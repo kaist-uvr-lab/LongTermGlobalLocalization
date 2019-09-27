@@ -200,7 +200,7 @@ namespace ORB_SLAM2{
 		//cv::waitKey(0);
 	}
 
-	void LineOptimizer::LineJunctionOptimization() {
+	void LineOptimizer::LineJunctionOptimization(Map* pMap) {
 		//Junction
 		//Line
 
@@ -212,10 +212,13 @@ namespace ORB_SLAM2{
 		optimizer.setAlgorithm(solver);
 
 		//Add Line Vertex
+		
 		vector<g2o::LineVertex*> vpLineVertices;
-		vector<Line3d*> vpLines;
+		set<Line3d*> spLines;
+		vector<Line3d*> vpLines = pMap->GetLine3ds();;
 
 		for (int i = 0; i < vpLines.size(); i++) {
+			
 			g2o::LineVertex* pLineVertex = new g2o::LineVertex();
 			//플리커 코디네잇에서 변환하는 과정
 			pLineVertex->setEstimate(g2o::LineConverter::ConvertParam(vpLines[i]->GetPluckerWorld()));
@@ -224,7 +227,10 @@ namespace ORB_SLAM2{
 
 			optimizer.addVertex(pLineVertex);
 			vpLineVertices.push_back(pLineVertex);
+			spLines.insert(vpLines[i]);
 		}
+		std::cout << "test::" << spLines.size() << ", " << vpLines.size() << std::endl;
+
 		//chi값의 설정 필요
 		const float deltaMono = sqrt(5.991);
 		//line edge
@@ -233,6 +239,14 @@ namespace ORB_SLAM2{
 		for (int i = 0; i < vpLines.size(); i++) {
 			Line3d* pLine = vpLines[i];
 
+			//add junction edge
+			auto spCPs = pLine->GetCoplanarLine3d();
+			for (auto iter = spCPs.begin(); iter != spCPs.end(); iter++) {
+				Line3d* pLine2 = *iter;
+
+			}
+
+			//add line edge
 			auto mObservations = pLine->GetObservations();
 			for (auto iter = mObservations.begin(); iter != mObservations.end(); iter++) {
 
@@ -315,7 +329,7 @@ namespace ORB_SLAM2{
 		}//for vplines
 
 		 //Line Junction Edges
-		vector<g2o::LineJunctionOptimizationEdge*> vpLineJunctionEdges;
+		/*vector<g2o::LineJunctionOptimizationEdge*> vpLineJunctionEdges;
 		vector<JunctionPair*> vpJunctions;
 
 		for (int i = 0; i < vpJunctions.size(); i++) {
@@ -334,7 +348,7 @@ namespace ORB_SLAM2{
 			e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[lIdx2]));
 			optimizer.addEdge(e);
 			vpLineJunctionEdges.push_back(e);
-		}
+		}*/
 
 		const float chi2Mono[4] = { 5.991,5.991,5.991,5.991 };
 		const int its[4] = { 10,10,10,10 };
@@ -349,6 +363,7 @@ namespace ORB_SLAM2{
 		//restore line data
 		for (int i = 0; i < vpLineVertices.size(); i++) {
 			Line3d* pLine = vpLines[i];
+			pLine->UpdateEndpts();
 			cv::Mat Lw;
 			g2o::LineVertex* vRecover = static_cast<g2o::LineVertex*>(optimizer.vertex(i));
 			cv::eigen2cv(g2o::LineConverter::ConvertPlukerCoordinates(vRecover->estimate()), Lw);

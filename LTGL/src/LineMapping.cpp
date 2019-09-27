@@ -1104,9 +1104,11 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			}
 			continue;
 		}
-		ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
-		pLine->UpdateEndpts();
+		//ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
+		//pLine->UpdateEndpts();
 	}
+
+	LineOptimizer::LineJunctionOptimization(_mpMap);
 
 	cout << "----Optimization done.\n" << endl;
 	numberLinesBefore = (_mpMap->GetLine3ds()).size();
