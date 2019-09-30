@@ -80,6 +80,7 @@ namespace g2o {
     }
 
     double currentChi = _optimizer->activeRobustChi2();
+	cout << "currentChi " << currentChi << endl;
     double tempChi=currentChi;
 
     double iniChi = currentChi;
@@ -123,10 +124,13 @@ namespace g2o {
       _optimizer->computeActiveErrors();
       tempChi = _optimizer->activeRobustChi2();
 
+	  cout << "tempChi " << tempChi << endl;
+
       if (! ok2)
         tempChi=std::numeric_limits<double>::max();
 
       rho = (currentChi-tempChi);
+	  cout << "currentChi-tempChi " << rho << endl;
       double scale = computeScale();
       scale += 1e-3; // make sure it's non-zero :)
       rho /=  scale;

@@ -651,7 +651,7 @@ bool System::LoadMap(const string &filename)
     cout << "Loading Mapfile: " << mapfile << std::flush;
     boost::archive::binary_iarchive ia(in, boost::archive::no_header);
     ia >> mpMap;
-    ia >> mpKeyFrameDatabase;
+	ia >> mpKeyFrameDatabase;
     mpKeyFrameDatabase->SetORBvocabulary(mpVocabulary);
     cout << " ...done" << std::endl;
     cout << "Map Reconstructing" << flush;

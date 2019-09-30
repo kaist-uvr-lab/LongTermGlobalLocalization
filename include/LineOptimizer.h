@@ -16,7 +16,7 @@ namespace ORB_SLAM2 {
 
 	public:
 		void static LineOptimization(Line3d* pLine);
-		void static LineJunctionOptimization();
+		void static LineJunctionOptimization(Map* pMap);
 
 	private:
 	};
