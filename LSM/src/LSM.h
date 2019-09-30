@@ -64,7 +64,7 @@ private:
 	//float  expandWidth = 20.0;
 
 	// **Changed : For faster computation.
-	float  expandWidth = 40.0;
+	float  expandWidth = 10.0;
 
 	int   nAvgDesDist = 2;
 	bool isScaleChangeExisting = false;
