@@ -264,6 +264,8 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, pair<Mat*, Ma
 	// variables for saving junction information for Frame1, Frame2.
 	map<size_t, set<size_t>> mnslineJunction1, mnslineJunction2;
 
+	cout << "here2" << endl;
+
 	for (int njunctionidx = 0; njunctionidx < nJunctions; njunctionidx++) {
 		// For every created juntions, add it to related 2D lines.
 		size_t img1LineIdx1 = matchedJunctionIndices->at<int>(njunctionidx, 0);
@@ -283,6 +285,8 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, pair<Mat*, Ma
 		_pKF2->AddJunction2d(img2LineIdx1, img2LineIdx2, newJP);
 	}
 	
+	cout << "here3" << endl;
+
 	// First get Plucker Coordinates of triangulated lines.  
 	Mat Ocw1 = _pKF1->GetCameraCenter();
 	Mat Ocw2 = _pKF2->GetCameraCenter();
@@ -904,7 +908,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			cout << count << "/" << vpKFS.size() << "KeyFrames has done. " << endl;
 			count++;
 
-			//if (pCurrentKF->mnFrameId != 2) {
+			//if (pCurrentKF->mnFrameId != 27) {
 			//	continue;
 			//}
 
@@ -930,7 +934,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 					continue;
 				}
 
-				//if (pCurrentKF->mnFrameId != 24 || pTmpKF->mnFrameId != 6) {
+				//if (pCurrentKF->mnFrameId != 19 || pTmpKF->mnFrameId != 4) {
 				//	continue;
 				//}
 
@@ -959,32 +963,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 					lineMatching->setFmat(Fmat);
 				pair<Mat*, Mat*> matchedLineInfo, matchedJunctionInfo;
 				lineMatching->lsm(matchedLineInfo, matchedJunctionInfo);
-
-				// Save Junction information.
-				Mat* matchedLines = matchedLineInfo.first;
-				Mat* matchedLineIndices = matchedLineInfo.second;
-				Mat* matchedJunctions = matchedJunctionInfo.first;
-				Mat* matchedJunctionIndices = matchedJunctionInfo.second;
-
-				int nMatchedLines = matchedLines->rows;
-				int nJunctions = matchedJunctions->rows;
-
-				if (nMatchedLines == 0 || nJunctions == 0)
-					continue;
-
-				for (int njunctionidx = 0; njunctionidx < nJunctions; njunctionidx++) {
-					// For every created juntions, add it to related 2D lines.
-					int img1LineIdx1 = matchedJunctionIndices->at<int>(njunctionidx, 0);
-					int img1LineIdx2 = matchedJunctionIndices->at<int>(njunctionidx, 1);
-					int img2LineIdx1 = matchedJunctionIndices->at<int>(njunctionidx, 2);
-					int img2LineIdx2 = matchedJunctionIndices->at<int>(njunctionidx, 3);
-
-					JunctionPair *newJP = new JunctionPair(pCurrentKF, pTmpKF, img1LineIdx1, img1LineIdx2, img2LineIdx1, img2LineIdx2);
-
-					pCurrentKF->AddJunction2d(img1LineIdx1, img1LineIdx2, newJP);
-					pTmpKF->AddJunction2d(img2LineIdx1, img2LineIdx2, newJP);
-				}
-
+				//cout << "here1" << endl;
 
 				int nCreatedLines = TwoViewTriangulation(matchedLineInfo, matchedJunctionInfo, K, invK, pCurrentKF, pTmpKF, _mpMap);
 				//int nCreatedLines = CollectObservations(matchedLines, K, invK, pCurrentKF, pTmpKF, _mpMap);
