@@ -1,3 +1,4 @@
+*.gitignore
 CMakeLists.txt.user
 Examples/Monocular/mono_euroc
 Examples/Monocular/mono_kitti
@@ -18,9 +19,19 @@ Thirdparty/g2o/build/
 Thirdparty/g2o/config.h
 Thirdparty/g2o/lib/
 Vocabulary/ORBvoc.txt
+data/
+Vocabulary/
+LTGL/
+Thirdparty/boost_1_71_0/
+Thirdparty/eigen/
+Thirdparty/opencv3.1.0/
+Thirdparty/Pangolin/
+Thirdparty/g2o/new/
+Thirdparty/g2o/bin/
 build/
 *~
 lib/
+
 
 *.sh
 cmake_modules/FindEigen3.cmake
