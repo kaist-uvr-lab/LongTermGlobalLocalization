@@ -41,9 +41,8 @@ namespace ORB_SLAM2 {
 
 	void Line3d::EraseCPObservation(KeyFrame* pKF, size_t idx)
 	{
-		set<size_t> stmpIdx = mCPLineObservations[pKF];
-		set<size_t>::iterator findIdx = stmpIdx.find(idx);
-		if (findIdx != stmpIdx.end()) {
+		set<size_t>::iterator findIdx = mCPLineObservations[pKF].find(idx);
+		if (findIdx != mCPLineObservations[pKF].end()) {
 			mCPLineObservations[pKF].erase(findIdx);
 		}
 	}
@@ -52,6 +51,9 @@ namespace ORB_SLAM2 {
 		return mCPLineObservations;
 	}
 
+	set<size_t> Line3d::GetCPLineObservations(KeyFrame *pKF) {
+		return mCPLineObservations[pKF];
+	}
 
 	void Line3d::UpdateCoplanarLine3d() {
 		// For all observations, gather coplanar 2d lines and finally update coplanar 3d lines. 

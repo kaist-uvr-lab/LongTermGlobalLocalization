@@ -59,6 +59,9 @@ namespace ORB_SLAM2 {
 		// Get all Coplanar line observations.
 		std::map<KeyFrame*, set<size_t>> GetCPLineObservations();
 
+		// Get all Coplanar line observations in given KF.
+		std::set<size_t> GetCPLineObservations(KeyFrame *pKF);
+
 		// Add Coplanar 3D lines.
 		void AddCoplanarLine3d(Line3d* pLine3d);
 

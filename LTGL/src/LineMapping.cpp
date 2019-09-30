@@ -7,7 +7,7 @@
 #include<opencv2/core/core.hpp>
 #include "LineOptimizer.h"
 
-cv::Mat LineMapping::SkewSymMat(float x, float y, float z){
+cv::Mat LineMapping::SkewSymMat(float x, float y, float z) {
 	Mat Ax = (Mat_<float>(3, 3, CV_32F) << 0, -z, y, z, 0, -x, -y, x, 0);
 	return Ax.clone();
 }
@@ -83,7 +83,7 @@ void LineMapping::Undistort(string &strSettingPath, vector<string> &vstrImageFil
 	cout << "Undistortion done." << endl;
 }
 
-void LineMapping::ComputeImageBounds(const cv::Mat &K,const cv::Mat &distCoef, cv::Mat &im)
+void LineMapping::ComputeImageBounds(const cv::Mat &K, const cv::Mat &distCoef, cv::Mat &im)
 {
 	if (distCoef.at<float>(0) != 0.0)
 	{
@@ -135,22 +135,22 @@ void LineMapping::FilterBoundaryLines(cv::Mat &lines) {
 			if ((spt_y > mnMinY) && (spt_y < mnMaxY))
 				continue;
 		}
-		
+
 		if ((ept_x > mnMinX) && (ept_x < mnMaxX)) {
 			if ((ept_y > mnMinY) && (ept_y < mnMaxY))
 				continue;
 		}
-		
+
 		vbadIdx.push_back(i);
 	}
 
 	// Remove rows using bad flags. 
 	int nbadLines = vbadIdx.size();
-	Mat filteredLines(nRows- nbadLines, nCols, CV_32F);
+	Mat filteredLines(nRows - nbadLines, nCols, CV_32F);
 	int nFilteredCols = nRows - nbadLines;
 	if (nbadLines < 1)
 		return;
-	
+
 	if (nbadLines == 1) {
 		if (vbadIdx[0] > 0)
 		{
@@ -230,7 +230,7 @@ void LineMapping::SaveKFinfo(vector<int> vKFindices, string writePath) {
 	}
 }
 
-cv::Mat LineMapping::ComputeFMatrix(const cv::Mat &_T, const cv::Mat &_K){
+cv::Mat LineMapping::ComputeFMatrix(const cv::Mat &_T, const cv::Mat &_K) {
 	//Compute F Matrix from given Relative Camera Pose.
 	//R,t should be relative matrix.(C1 -> C2)
 	cv::Mat R = _T.rowRange(0, 3).colRange(0, 3);
@@ -242,7 +242,7 @@ cv::Mat LineMapping::ComputeFMatrix(const cv::Mat &_T, const cv::Mat &_K){
 
 
 int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, pair<Mat*, Mat*> _pairJunctions, const Mat &_K, const Mat &_invK, KeyFrame *_pKF1, KeyFrame *_pKF2, Map *_pMap) {
-	
+
 	int nCreatedLines = 0;
 	Mat K = _K;
 	Mat invK = _invK;
@@ -278,13 +278,13 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, pair<Mat*, Ma
 
 		mnslineJunction2[img2LineIdx1].insert(img2LineIdx2);
 		mnslineJunction2[img2LineIdx2].insert(img2LineIdx1);
-	
+
 		JunctionPair *newJP = new JunctionPair(_pKF1, _pKF2, img1LineIdx1, img1LineIdx2, img2LineIdx1, img2LineIdx2);
 
 		_pKF1->AddJunction2d(img1LineIdx1, img1LineIdx2, newJP);
 		_pKF2->AddJunction2d(img2LineIdx1, img2LineIdx2, newJP);
 	}
-	
+
 	cout << "here3" << endl;
 
 	// First get Plucker Coordinates of triangulated lines.  
@@ -382,7 +382,7 @@ int LineMapping::TwoViewTriangulation(pair<Mat*, Mat*> _pairLines, pair<Mat*, Ma
 		Mat d_vector = (Mat_<float>(3, 1, CV_32F) << -dual_L.at<float>(1, 2), dual_L.at<float>(0, 2), -dual_L.at<float>(0, 1));
 		Mat n_vector = dual_L.col(3).rowRange(0, 3);
 		Mat triangulated_line = Mat::zeros(6, 1, CV_32F);
-		
+
 		// Make direction vector into unit length. 
 		//float magNvect = MagMat(d_vector);
 		//n_vector = n_vector / magNvect;
@@ -459,7 +459,7 @@ int LineMapping::CollectObservations(pair<Mat*, Mat*> _pairLines, pair<Mat*, Mat
 	if (nMatchedLines == 0) {
 		cout << "Pass triangulation" << endl;
 	}
-	
+
 	for (int i = 0; i < nMatchedLines; i++) {
 		Mat matchedPts = matchedLines->row(i);
 
@@ -505,7 +505,7 @@ int LineMapping::CollectObservations(pair<Mat*, Mat*> _pairLines, pair<Mat*, Mat
 	return nCreatedLines;
 }
 
-void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap){
+void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap) {
 	vector<KeyFrame*> vpKFS = _vKFs;
 	int count = 0;
 	/************Search proper inital line parameter via RANSAC *****************************/
@@ -527,7 +527,7 @@ void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap){
 
 			// If it includes only two observation, erase it due to its instability. 
 			if (nObs < 3) {
-				_mpMap->EraseLine3d(pCurrentLine3d);				
+				_mpMap->EraseLine3d(pCurrentLine3d);
 				map<KeyFrame*, size_t> tmpObs = pCurrentLine3d->GetObservations();
 				for (map<KeyFrame*, size_t>::iterator mObsIt = tmpObs.begin(), mObsEnd = tmpObs.end(); mObsIt != mObsEnd; mObsIt++) {
 					KeyFrame* pTmpKF = mObsIt->first;
@@ -607,11 +607,28 @@ void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap){
 
 			//Erase observation for outliers.
 			for (map<KeyFrame*, size_t>::iterator mit = mAllObervations.begin(), mend = mAllObervations.end(); mit != mend; mit++) {
-				if (!finalInlierIdx[mit->first]) {
-					pCurrentLine3d->EraseObservation(mit->first);
-					pCurrentLine3d->EraseCPObservation(mit->first, mit->second);
+				KeyFrame *pTmpKF = mit->first;
+				size_t sCurrentLine3dIdx = mit->second;
+
+				if (!finalInlierIdx[pTmpKF]) {
+					pCurrentLine3d->EraseObservation(pTmpKF);
+
+					// Erase coplanar observation for outliers.
+					set<size_t> stmpIdx = pCurrentLine3d->GetCPLineObservations(pTmpKF);
+					for (set<size_t>::iterator sit = stmpIdx.begin(), send = stmpIdx.end(); sit != send; sit++) {
+						// Get index of coplanar 2d lines in each of KF that oberves given Line3d. 
+						size_t tmpIdx = *sit;
+						Line3d *pLine3d = pTmpKF->Get3DLine(tmpIdx);
+						if (!pLine3d)
+							continue;
+						
+						pLine3d->EraseCPObservation(pTmpKF, sCurrentLine3dIdx);
+						
+					}
+
+					//pCurrentLine3d->EraseCPObservation(mit->first, mit->second);
 				}
-					
+
 			}
 
 		}
@@ -621,7 +638,7 @@ void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap){
 
 //int LineMapping::InitializeLineParam(pair<Mat*, Mat*> _pairLines, const Mat &_K, const Mat &_invK, KeyFrame *_pKF1, KeyFrame *_pKF2, Map *_pMap)
 
-bool LineMapping::InitializeLineParam(KeyFrame *_pKF1, KeyFrame *_pKF2, const Mat &line2d1, const Mat &line2d2, Mat &tmpPlucker, Map *_pMap){
+bool LineMapping::InitializeLineParam(KeyFrame *_pKF1, KeyFrame *_pKF2, const Mat &line2d1, const Mat &line2d2, Mat &tmpPlucker, Map *_pMap) {
 
 	// Initialize line parameter with given two KFs, two 2D lines. 
 	Mat K = _pKF1->mK;
@@ -686,8 +703,8 @@ bool LineMapping::InitializeLineParam(KeyFrame *_pKF1, KeyFrame *_pKF2, const Ma
 	return true;
 }
 
-pair<float,int> LineMapping::ComputeModelScore(const Mat &tmpPlucker, const Mat &K, map<KeyFrame*, size_t> allObservations, map<KeyFrame*, bool> &inlierIndex, const float th){
-	
+pair<float, int> LineMapping::ComputeModelScore(const Mat &tmpPlucker, const Mat &K, map<KeyFrame*, size_t> allObservations, map<KeyFrame*, bool> &inlierIndex, const float th) {
+
 	float error = 0;
 	int inliers = 0;
 
@@ -727,12 +744,12 @@ pair<float,int> LineMapping::ComputeModelScore(const Mat &tmpPlucker, const Mat 
 		float e1 = spt.dot(projectedL2d) / len;
 		float e2 = ept.dot(projectedL2d) / len;
 		float tmpE = abs(e1) + abs(e2);
-		
+
 		if (abs(tmpE) > th) {
 			inlierIndex[pTmpKF] = false;
 			continue;
 		}
-		
+
 		error += tmpE;
 		inliers++;
 		inlierIndex[pTmpKF] = true;
@@ -743,7 +760,7 @@ pair<float,int> LineMapping::ComputeModelScore(const Mat &tmpPlucker, const Mat 
 }
 
 
-void LineMapping::TestVisualization(vector<ORB_SLAM2::KeyFrame*> vpKFS, string &imgDir, vector<string> &vstrImageFilenames){
+void LineMapping::TestVisualization(vector<ORB_SLAM2::KeyFrame*> vpKFS, string &imgDir, vector<string> &vstrImageFilenames) {
 	KeyFrame *pKF1st = *(vpKFS.begin());
 	Mat K = pKF1st->mK;
 	float fx = K.at<float>(0, 0);
@@ -762,8 +779,8 @@ void LineMapping::TestVisualization(vector<ORB_SLAM2::KeyFrame*> vpKFS, string &
 		KeyFrame *pKF = (*vit);
 		vector<Line3d*> vline3ds = pKF->Get3DLines();
 
-		
-		for (vector<Line3d*>::iterator l3dit = vline3ds.begin(), l3dend = vline3ds.end(); l3dit!= l3dend; l3dit++) {
+
+		for (vector<Line3d*>::iterator l3dit = vline3ds.begin(), l3dend = vline3ds.end(); l3dit != l3dend; l3dit++) {
 			Line3d *tmpLine3d = (*l3dit);
 
 			if (!tmpLine3d)
@@ -875,7 +892,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		for (vector<ORB_SLAM2::KeyFrame*>::iterator vit = vpKFS.begin(), vend = vpKFS.end(); vit != vend; vit++) {
 			Mat lines;
 			ORB_SLAM2::KeyFrame* pCurrentKF = *vit;
-			
+
 			if (!mbIsLSD) {
 				// Load provided lines from txt file. 
 				//string strLineName = imgDir + "/results/" + to_string(pCurrentKF->mnFrameId + 1) + "_lines.txt";
@@ -889,7 +906,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 				char* imgName = &strImgName[0];
 				lineMatching->detectLine(imgName, lines, 0);
 			}
-			
+
 			//Remove lines extracted on the boundary(caused by undistortion.)
 			FilterBoundaryLines(lines);
 			pCurrentKF->SetExtracted2DLines(lines);
@@ -948,7 +965,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 
 				cout << imgName1 << endl;
 				cout << imgName2 << endl;
-			
+
 				// Set Lines for linematching. 
 				lineMatching->setImgLines(imgName1, imgName2, pCurrentKF->GetAll2DLines(), pTmpKF->GetAll2DLines());
 
@@ -1055,7 +1072,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 				//	set<size_t> sAllobs = mCPLineObit->second;
 				//	pTmpLine->EraseCPObservation(pTmpCPKF, pLine->GetIndexInKeyFrame(pTmpCPKF));
 				//}
-				
+
 				// Erase 3d coplanar line information.
 				pTmpLine->EraseCoplanarLine3d(pLine);
 			}
@@ -1067,7 +1084,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	unOptLines3D = _mpMap->GetLine3ds();
 	numberLinesBefore = unOptLines3D.size();
 	cout << "----" << numberLinesBefore << " of lines were registered before optimization.. " << endl;
-	
+
 	for (vector<ORB_SLAM2::Line3d*>::iterator vit = unOptLines3D.begin(), vend = unOptLines3D.end(); vit != vend; vit++) {
 		Line3d* pLine = *vit;
 		if (!pLine)
