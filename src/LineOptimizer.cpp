@@ -203,47 +203,67 @@ namespace ORB_SLAM2{
 	void LineOptimizer::LineJunctionOptimization(Map* pMap) {
 		//Junction
 		//Line
-
 		g2o::SparseOptimizer optimizer;
 		g2o::BlockSolver_4_4::LinearSolverType * linearSolver;
 		linearSolver = new g2o::LinearSolverDense<g2o::BlockSolver_4_4::PoseMatrixType>();
 		g2o::BlockSolver_4_4 * solver_ptr = new g2o::BlockSolver_4_4(linearSolver);
+		//solver_ptr->setSchur(false);
+		std::cout << "schur==" << solver_ptr->schur()<< std::endl;
 		g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(solver_ptr);
 		optimizer.setAlgorithm(solver);
 
 		//Add Line Vertex
 		
 		vector<g2o::LineVertex*> vpLineVertices;
-		set<Line3d*> spLines;
-		vector<Line3d*> vpLines = pMap->GetLine3ds();;
-
+		map<Line3d*, int> mpLines;
+		vector<Line3d*> vpLines = pMap->GetLine3ds();
+		//int nID = 0;
 		for (int i = 0; i < vpLines.size(); i++) {
 			
 			g2o::LineVertex* pLineVertex = new g2o::LineVertex();
 			//플리커 코디네잇에서 변환하는 과정
 			pLineVertex->setEstimate(g2o::LineConverter::ConvertParam(vpLines[i]->GetPluckerWorld()));
-			pLineVertex->setId(0);
+			pLineVertex->setId(i);
 			pLineVertex->setFixed(false);
-
+			//pLineVertex->setMarginalized(true);
 			optimizer.addVertex(pLineVertex);
 			vpLineVertices.push_back(pLineVertex);
-			spLines.insert(vpLines[i]);
+			mpLines.insert(make_pair(vpLines[i],i));
 		}
-		std::cout << "test::" << spLines.size() << ", " << vpLines.size() << std::endl;
+		std::cout << "test::" << mpLines.size() << ", " << vpLineVertices.size() << std::endl;
 
 		//chi값의 설정 필요
 		const float deltaMono = sqrt(5.991);
 		//line edge
 		std::vector<g2o::EdgeLineOptimization*> vpEdgesLineOptimization;
+		vector<g2o::LineJunctionOptimizationEdge*> vpLineJunctionEdges;
 
-		for (int i = 0; i < vpLines.size(); i++) {
+		for (int i = 0; i < vpLineVertices.size(); i++) {
 			Line3d* pLine = vpLines[i];
 
 			//add junction edge
 			auto spCPs = pLine->GetCoplanarLine3d();
 			for (auto iter = spCPs.begin(); iter != spCPs.end(); iter++) {
 				Line3d* pLine2 = *iter;
-
+				auto findres = mpLines.find(pLine2);
+				
+				if (findres != mpLines.end()) {
+					
+					int idx2 = mpLines[pLine2];
+					g2o::LineJunctionOptimizationEdge* e = new g2o::LineJunctionOptimizationEdge();
+					e->setLevel(0);
+					e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[i]));
+					e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[idx2]));
+					e->setInformation(Eigen::Matrix<double, 1, 1>::Identity());
+					//optimizer.addEdge(e);
+					vpLineJunctionEdges.push_back(e);
+					//std::cout << "success::" << i << ", " << idx2 << std::endl;
+				}
+				else {
+					if (pLine2) {
+						//std::cout << "error case ::" << pLine2->GetNumObservations() << std::endl;
+					}
+				}
 			}
 
 			//add line edge
@@ -276,7 +296,7 @@ namespace ORB_SLAM2{
 
 				g2o::EdgeLineOptimization* e = new g2o::EdgeLineOptimization();
 				e->setLevel(0);
-				e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[i]));
+				e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(i)));
 
 				e->spt << spt.at<float>(0), spt.at<float>(1), spt.at<float>(2);
 				e->ept << ept.at<float>(0), ept.at<float>(1), ept.at<float>(2);
@@ -284,8 +304,10 @@ namespace ORB_SLAM2{
 				float dy = spt.at<float>(1) - ept.at<float>(1);
 				float length = sqrt(dx*dx + dy*dy);
 				float alpha = 100;
-				e->length = length;
-				e->alpha = alpha;
+				/*e->length = length;
+				e->alpha = alpha;*/
+				e->length = 1;
+				e->alpha = 1;
 
 				e->setInformation(Eigen::Matrix2d::Identity());
 				g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
@@ -328,36 +350,51 @@ namespace ORB_SLAM2{
 			}//for observations
 		}//for vplines
 
-		 //Line Junction Edges
-		/*vector<g2o::LineJunctionOptimizationEdge*> vpLineJunctionEdges;
-		vector<JunctionPair*> vpJunctions;
-
-		for (int i = 0; i < vpJunctions.size(); i++) {
-			JunctionPair* junctionPair = vpJunctions[i];
-			auto tjunctionPair = junctionPair->GetJunctionPair();
-			Junction* junc1 = tjunctionPair.first;
-			Junction* junc2 = tjunctionPair.second;
-
-			Line3d* line1;
-			Line3d* line2;
-			int lIdx1, lIdx2;
-
-			g2o::LineJunctionOptimizationEdge* e = new g2o::LineJunctionOptimizationEdge();
-			e->setLevel(0);
-			e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[lIdx1]));
-			e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[lIdx2]));
-			optimizer.addEdge(e);
-			vpLineJunctionEdges.push_back(e);
-		}*/
-
 		const float chi2Mono[4] = { 5.991,5.991,5.991,5.991 };
 		const int its[4] = { 10,10,10,10 };
 
 		for (size_t it = 0; it < 4; it++)
 		{
 			//nBad = 0;
+			double err0_0 = 0.0;
+			double err0_1 = 0.0;
+			double err1 = 0.0;
+			double err2 = 0.0;
+
+			for (int i = 0; i < vpLineJunctionEdges.size(); i++) {
+				vpLineJunctionEdges[i]->computeError();
+				double chi2 = vpLineJunctionEdges[i]->chi2();
+				//std::cout << "edge::" << i << "::" << chi2 << std::endl;
+				err0_0 += chi2;
+			}
+
+			for (int i = 0; i < vpEdgesLineOptimization.size(); i++) {
+				vpEdgesLineOptimization[i]->computeError();
+				double chi2 = vpEdgesLineOptimization[i]->chi2();
+				//std::cout << "edge::" << i << "::" << chi2 << std::endl;
+				err0_1 += chi2;
+			}
+			//vpEdgesLineOptimization
+			std::cout << "init::" << it << "::total= " << err0_0 << " line = " << err0_1 << std::endl;
+
 			optimizer.initializeOptimization(0);
 			optimizer.optimize(its[it]);
+			//optimizer.setVerbose(true);
+			
+			for (int i = 0; i < vpLineJunctionEdges.size(); i++) {
+				vpLineJunctionEdges[i]->computeError();
+				double chi2 = vpLineJunctionEdges[i]->chi2();
+				//std::cout << "edge::" << i << "::" << chi2 << std::endl;
+				err1 += chi2;
+			}
+			for (int i = 0; i < vpEdgesLineOptimization.size(); i++) {
+				vpEdgesLineOptimization[i]->computeError();
+				double chi2 = vpEdgesLineOptimization[i]->chi2();
+				//std::cout << "edge::" << i << "::" << chi2 << std::endl;
+				err2 += chi2;
+			}
+			//vpEdgesLineOptimization
+			std::cout << "iter::" << it << "::total=" << err1<<", "<<err2 << std::endl;
 		}
 
 		//restore line data

@@ -1064,22 +1064,22 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 				pTmpKF->EraseLine3dMatch(pLine);
 			}
 
-			// Erase Junction observations. 
-			set<Line3d*> sTmpCPLine3ds = pLine->GetCoplanarLine3d();
-			for (set<Line3d*>::iterator sit = sTmpCPLine3ds.begin(), send = sTmpCPLine3ds.end(); sit != send; sit++) {
-				Line3d* pTmpLine = *sit;
+			//// Erase Junction observations. 
+			//set<Line3d*> sTmpCPLine3ds = pLine->GetCoplanarLine3d();
+			//for (set<Line3d*>::iterator sit = sTmpCPLine3ds.begin(), send = sTmpCPLine3ds.end(); sit != send; sit++) {
+			//	Line3d* pTmpLine = *sit;
 
-				//// Erase 2d junction information.
-				//map<KeyFrame*, set<size_t>> mTmpCPObs = pTmpLine->GetCPLineObservations();
-				//for (map<KeyFrame*, set<size_t>>::iterator mCPLineObit = mTmpCPObs.begin(), mCPLineObend = mTmpCPObs.end(); mCPLineObit != mCPLineObend; mCPLineObit++) {
-				//	KeyFrame *pTmpCPKF = mCPLineObit->first;
-				//	set<size_t> sAllobs = mCPLineObit->second;
-				//	pTmpLine->EraseCPObservation(pTmpCPKF, pLine->GetIndexInKeyFrame(pTmpCPKF));
-				//}
-				
-				// Erase 3d coplanar line information.
-				pTmpLine->EraseCoplanarLine3d(pLine);
-			}
+			//	// Erase 2d junction information.
+			//	map<KeyFrame*, set<size_t>> mTmpCPObs = pTmpLine->GetCPLineObservations();
+			//	for (map<KeyFrame*, set<size_t>>::iterator mCPLineObit = mTmpCPObs.begin(), mCPLineObend = mTmpCPObs.end(); mCPLineObit != mCPLineObend; mCPLineObit++) {
+			//		KeyFrame *pTmpCPKF = mCPLineObit->first;
+			//		set<size_t> sAllobs = mCPLineObit->second;
+			//		pTmpLine->EraseCPObservation(pTmpCPKF, pLine->GetIndexInKeyFrame(pTmpCPKF));
+			//	}
+			//	
+			//	// Erase 3d coplanar line information.
+			//	pTmpLine->EraseCoplanarLine3d(pLine);
+			//}
 			continue;
 		}
 		pLine->UpdateEndpts();
@@ -1104,11 +1104,13 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			}
 			continue;
 		}
-		//ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
-		//pLine->UpdateEndpts();
+
+		ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
+		pLine->UpdateEndpts();
 	}
 
 	LineOptimizer::LineJunctionOptimization(_mpMap);
+
 
 	cout << "----Optimization done.\n" << endl;
 	numberLinesBefore = (_mpMap->GetLine3ds()).size();

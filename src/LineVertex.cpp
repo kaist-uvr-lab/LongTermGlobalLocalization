@@ -265,7 +265,7 @@ namespace  g2o {
 		Vector3d Dw2 = Lw2.tail(3);
 
 		Vector3d tempCross = Dw1.cross(Dw2);
-		_error[0] = (Nw1.dot(Dw2) + Nw2.dot(Dw1)) / tempCross.norm();
+		_error[0] = 10 * (Nw1.dot(Dw2) + Nw2.dot(Dw1)) / tempCross.norm();
 
 	}
 	void LineJunctionOptimizationEdge::linearizeOplus() {
@@ -302,19 +302,19 @@ namespace  g2o {
 		//Jacobian Lw/Lo
 		MatrixXd JLw1 = MatrixXd::Zero(6, 4);
 		JLw1.block<3, 1>(0, 1) = -w11*U1.col(2);
-		JLw1.block<3, 1>(0, 2) = w11*U1.col(1);
+		JLw1.block<3, 1>(0, 2) =  w11*U1.col(1);
 		JLw1.block<3, 1>(0, 3) = -w12*U1.col(0);
-		JLw1.block<3, 1>(3, 0) = w12*U1.col(2);
+		JLw1.block<3, 1>(3, 0) =  w12*U1.col(2);
 		JLw1.block<3, 1>(3, 2) = -w12*U1.col(0);
-		JLw1.block<3, 1>(3, 3) = w11*U1.col(1);
+		JLw1.block<3, 1>(3, 3) =  w11*U1.col(1);
 
 		MatrixXd JLw2 = MatrixXd::Zero(6, 4);
 		JLw2.block<3, 1>(0, 1) = -w21*U2.col(2);
-		JLw2.block<3, 1>(0, 2) = w21*U2.col(1);
+		JLw2.block<3, 1>(0, 2) =  w21*U2.col(1);
 		JLw2.block<3, 1>(0, 3) = -w22*U2.col(0);
-		JLw2.block<3, 1>(3, 0) = w22*U2.col(2);
+		JLw2.block<3, 1>(3, 0) =  w22*U2.col(2);
 		JLw2.block<3, 1>(3, 2) = -w22*U2.col(0);
-		JLw2.block<3, 1>(3, 3) = w21*U2.col(1);
+		JLw2.block<3, 1>(3, 3) =  w21*U2.col(1);
 
 		//Jacobian Lr/Lw
 		Vector6d Jr1 = Vector6d::Zero();
