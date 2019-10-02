@@ -12,6 +12,7 @@ namespace ORB_SLAM2 {
 	class Line3d {
 
 	public:
+		~Line3d();
 		Line3d(cv::Mat &_plucker, cv::Mat &_endPts, Map* pMap);
 
 		void SetPluckerWorld(cv::Mat &_plucker) { _plucker.copyTo(mPlucker); };
@@ -53,8 +54,14 @@ namespace ORB_SLAM2 {
 		// Add coplanar line observation for this Line3d.
 		void AddCPObservation(KeyFrame* pKF, set<size_t> vIndices);
 
-		// Erase given coplanar line observation from the coplanar observation of this Line3d.
-		void EraseCPObservation(KeyFrame* pKF, size_t idx);
+		// For given KF, erase all of coplanar line observations for this Line3d.
+		void EraseCPObservations(KeyFrame* pKF, size_t idx);
+
+		// For given KF, erase coplanar line observation for this Line3d.
+		void EraseKFCPObservation(KeyFrame* pKF);
+
+		// For given KF, erase a single coplanar line observation for this Line3d.
+		void EraseSingleCPObservation(KeyFrame* pKF, size_t idx);
 
 		// Get all Coplanar line observations.
 		std::map<KeyFrame*, set<size_t>> GetCPLineObservations();

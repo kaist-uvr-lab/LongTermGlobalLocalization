@@ -255,7 +255,7 @@ namespace ORB_SLAM2{
 					e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[i]));
 					e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[idx2]));
 					e->setInformation(Eigen::Matrix<double, 1, 1>::Identity());
-					//optimizer.addEdge(e);
+					optimizer.addEdge(e);
 					vpLineJunctionEdges.push_back(e);
 					//std::cout << "success::" << i << ", " << idx2 << std::endl;
 				}
@@ -338,7 +338,7 @@ namespace ORB_SLAM2{
 
 				//std::cout << e->T<<T << std::endl;
 
-				optimizer.addEdge(e);
+				//optimizer.addEdge(e);
 				vpEdgesLineOptimization.push_back(e);
 
 				//e->computeError();
@@ -382,14 +382,31 @@ namespace ORB_SLAM2{
 			//optimizer.setVerbose(true);
 			
 			for (int i = 0; i < vpLineJunctionEdges.size(); i++) {
-				vpLineJunctionEdges[i]->computeError();
-				double chi2 = vpLineJunctionEdges[i]->chi2();
+				//vpLineJunctionEdges[i]->computeError();
+				//double chi2 = vpLineJunctionEdges[i]->chi2();
+				Eigen::Vector3d rho;
+				double chi2 = 0;
+				g2o::LineJunctionOptimizationEdge* e = vpLineJunctionEdges[i];
+				e->computeError();
+				chi2 = e->chi2();
+				/*e->robustKernel()->robustify(e->chi2(), rho);
+				chi2 = rho[0];*/
+				
 				//std::cout << "edge::" << i << "::" << chi2 << std::endl;
 				err1 += chi2;
 			}
 			for (int i = 0; i < vpEdgesLineOptimization.size(); i++) {
-				vpEdgesLineOptimization[i]->computeError();
-				double chi2 = vpEdgesLineOptimization[i]->chi2();
+
+				//vpEdgesLineOptimization[i]->computeError();
+				//double chi2 = vpEdgesLineOptimization[i]->chi2();
+
+				Eigen::Vector3d rho;
+				double chi2 = 0;
+				g2o::EdgeLineOptimization* e = vpEdgesLineOptimization[i];
+				e->computeError();
+				e->robustKernel()->robustify(e->chi2(), rho);
+				chi2 = rho[0];
+
 				//std::cout << "edge::" << i << "::" << chi2 << std::endl;
 				err2 += chi2;
 			}
