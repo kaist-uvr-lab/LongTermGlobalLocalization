@@ -651,6 +651,9 @@ void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap) {
 			size_t sCurrentLine3dIdx = mit->second;
 
 			if (!finalInlierIdx[pTmpKF]) {
+				//Erase 3d line observation.
+				pTmpKF->EraseLine3dMatch(pCurrentLine3d);
+
 				//Erase line observations.
 				pCurrentLine3d->EraseObservation(pTmpKF);
 					
@@ -1089,6 +1092,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			}
 
 			// Erase Junction observations. 
+			pLine->UpdateCoplanarLine3d();
 			set<Line3d*> sTmpCPLine3ds = pLine->GetCoplanarLine3d();
 			for (set<Line3d*>::iterator sit = sTmpCPLine3ds.begin(), send = sTmpCPLine3ds.end(); sit != send; sit++) {
 				Line3d* pTmpLine = *sit;
@@ -1111,7 +1115,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	}
 
 	// Test whether coplanar lines are correct. 
-	bool testCPlines = false;
+	bool testCPlines = true;
 	if (testCPlines) {
 		vector<Line3d*> testLine3d = _mpMap->GetLine3ds();
 		for (vector<ORB_SLAM2::Line3d*>::iterator vit = testLine3d.begin(), vend = testLine3d.end(); vit != vend; vit++) {
@@ -1131,6 +1135,13 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 				Mat currentLine = pKF->Get2DLine(pLine->GetIndexInKeyFrame(pKF));
 				Mat im = imread(imgName);
 
+				set<Line3d*> setLine3ds = pLine->GetCoplanarLine3d();
+				pLine->SetIsSelected(true);
+
+				for (set<Line3d*>::iterator sit = setLine3ds.begin(), send = setLine3ds.end(); sit != send; sit++) {
+					(*sit)->SetIsSelected(true);
+				}
+
 				line(im, Point(currentLine.at<float>(0), currentLine.at<float>(1)), Point(currentLine.at<float>(2), currentLine.at<float>(3)), Scalar(0, 0, 255), 2);
 				for (set<size_t>::iterator ssit = sIdx.begin(), ssend = sIdx.end(); ssit != ssend; ssit++) {
 					Mat cpLine = pKF->Get2DLine(*ssit);
@@ -1141,6 +1152,13 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 				waitKey(0);
 				destroyAllWindows();
 			}
+
+			set<Line3d*> setLine3ds = pLine->GetCoplanarLine3d();
+			for (set<Line3d*>::iterator sit = setLine3ds.begin(), send = setLine3ds.end(); sit != send; sit++) {
+				(*sit)->SetIsSelected(false);
+			}
+			pLine->SetIsSelected(false);
+
 		}
 	}
 
@@ -1177,6 +1195,8 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 
 	ORB_SLAM2::LineOptimizer::LineJunctionOptimization(_mpMap);
 
+	cout << "Wait for key.... " << endl;
+	std::cin >> wait;
 
 	cout << "----Optimization done.\n" << endl;
 	numberLinesBefore = (_mpMap->GetLine3ds()).size();

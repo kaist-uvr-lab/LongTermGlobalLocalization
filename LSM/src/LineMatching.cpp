@@ -366,6 +366,80 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 		plotLineMatches(colorImg1.clone(), colorImg2.clone(), vstrLineMatch, "Final line matches");	
 		waitKey();
 	}
+
+	//// Test junction info. 
+	//int nlineMatches = vstrLineMatch.size();
+	//int cols1 = img1.cols;
+
+	//int color[6][3];
+	//color[0][0] = 255; color[0][1] = 0;  color[0][2] = 0;
+	//color[1][0] = 0;  color[1][1] = 255; color[1][2] = 0;
+	//color[2][0] = 0;  color[2][1] = 0;  color[2][2] = 255;
+	//color[3][0] = 255; color[3][1] = 255; color[3][2] = 0;
+	//color[4][0] = 0; color[4][1] = 255; color[4][2] = 255;
+	//color[5][0] = 255; color[5][1] = 0; color[5][2] = 255;
+
+
+	//for (int i = 0; i < tmpJunctionIdx.rows; i++)
+	//{
+	//	Mat combinedImg;
+	//	//concatenateTwoImgs(img1, img2, combinedImg);
+	//	hconcat(colorImg1.clone(), colorImg2.clone(), combinedImg);
+
+	//	int color_num = rand() % 6;
+	//	int R = color[color_num][0];
+	//	int G = color[color_num][1];
+	//	int B = color[color_num][2];
+
+	//	int ser1_1 = tmpJunctionIdx.row(i).at<int>(0);
+	//	int ser1_2 = tmpJunctionIdx.row(i).at<int>(1);
+	//	int ser2_1 = tmpJunctionIdx.row(i).at<int>(2);
+	//	int ser2_2 = tmpJunctionIdx.row(i).at<int>(3);
+
+	//	Point2f spt1_1 = strline1[ser1_1].ps;
+	//	Point2f ept1_1 = strline1[ser1_1].pe;
+	//	line(combinedImg, spt1_1, ept1_1, cvScalar(R, G, B), 2);
+
+	//	Point2f spt1_2 = strline1[ser1_2].ps;
+	//	Point2f ept1_2 = strline1[ser1_2].pe;
+	//	line(combinedImg, spt1_2, ept1_2, cvScalar(R, G, B), 2);
+
+	//	Point2f spt2_1 = strline2[ser2_1].ps;
+	//	Point2f ept2_1 = strline2[ser2_1].pe;
+	//	spt2_1.x += cols1;
+	//	ept2_1.x += cols1;
+	//	line(combinedImg, spt2_1, ept2_1, cvScalar(R, G, B), 2);
+
+	//	Point2f spt2_2 = strline2[ser2_2].ps;
+	//	Point2f ept2_2 = strline2[ser2_2].pe;
+	//	spt2_2.x += cols1;
+	//	ept2_2.x += cols1;
+	//	line(combinedImg, spt2_2, ept2_2, cvScalar(R, G, B), 2);
+
+	//	//stringstream ss;
+	//	//string str;
+	//	//ss << i;
+	//	//ss >> str;
+	//	//Point2i midpt1, midpt2, tpt;
+	//	//tpt = spt1 + ept1;
+	//	//midpt1.x = (int)tpt.x / 2;
+	//	//midpt1.y = (int)tpt.y / 2;
+	//	//putText(combinedImg, str, midpt1, FONT_HERSHEY_SIMPLEX, 0.5, cvScalar(R, G, B), 1);
+	//	//tpt = spt2 + ept2;
+	//	//midpt2.x = (int)tpt.x / 2;
+	//	//midpt2.y = (int)tpt.y / 2;
+	//	//putText(combinedImg, str, midpt2, FONT_HERSHEY_SIMPLEX, 0.5, cvScalar(R, G, B), 1);
+
+	//	string imgName = "Final line matches";
+	//	imshow(imgName, combinedImg);
+	//	waitKey();
+	//}
+
+
+
+
+
+
 };
 
 void CLineMatching::setJunctionInfo(Mat &junctions, Mat&junctionIdx) {

@@ -218,7 +218,7 @@ namespace ORB_SLAM2{
 		map<Line3d*, int> mpLines;
 		vector<Line3d*> vpLines = pMap->GetLine3ds();
 		//int nID = 0;
-		for (int i = 0; i < 5; i++) {
+		for (int i = 0; i < 1; i++) {
 		//for (int i = 0; i < vpLines.size(); i++) {
 			vpLines[i]->SetIsSelected(true);
 			g2o::LineVertex* pLineVertex = new g2o::LineVertex();

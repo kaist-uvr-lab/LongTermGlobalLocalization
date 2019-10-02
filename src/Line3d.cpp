@@ -98,6 +98,8 @@ namespace ORB_SLAM2 {
 
 
 	void Line3d::UpdateCoplanarLine3d() {
+		msCoplanarLine3ds.clear();
+		mmapCPLine3ds.clear();
 		// For all observations, gather coplanar 2d lines and finally update coplanar 3d lines. 
 		for (map<KeyFrame*, size_t>::iterator mit = mLineObservations.begin(), mend = mLineObservations.end(); mit != mend; mit++) {
 			KeyFrame* pTmpKF = mit->first;
@@ -257,12 +259,19 @@ namespace ORB_SLAM2 {
 
 	// Add Coplanar lines.
 	void Line3d::AddCoplanarLine3d(Line3d* pLine3d) {
+		if (mmapCPLine3ds.count(pLine3d)) {
+			mmapCPLine3ds[pLine3d] += 1;
+		}
+		else
+			mmapCPLine3ds[pLine3d] = 1;
+
 		msCoplanarLine3ds.insert(pLine3d);
 	}
 
 	// Erase Coplanar lines.
 	void Line3d::EraseCoplanarLine3d(Line3d* pLine3d) {
 		msCoplanarLine3ds.erase(pLine3d);
+		mmapCPLine3ds.erase(pLine3d);
 	}
 
 

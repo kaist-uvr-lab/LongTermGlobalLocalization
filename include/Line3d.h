@@ -102,6 +102,7 @@ namespace ORB_SLAM2 {
 
 		// coplanar lines
 		set<Line3d*> msCoplanarLine3ds;
+		map<Line3d*, int> mmapCPLine3ds;
 
 		// number of coplanar lines
 		int nCoPlanarLine3ds;
