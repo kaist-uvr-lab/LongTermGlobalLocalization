@@ -1080,7 +1080,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			map<KeyFrame*, size_t> tmpObs = pLine->GetObservations();
 			for (map<KeyFrame*, size_t>::iterator mObsIt = tmpObs.begin(), mObsEnd = tmpObs.end(); mObsIt != mObsEnd; mObsIt++) {
 				KeyFrame* pTmpKF = mObsIt->first;
-				size_t sCurrentLine3dIdx = mObsEnd->second;
+				size_t sCurrentLine3dIdx = mObsIt->second;
 
 				//Erase 3d line observation.
 				pTmpKF->EraseLine3dMatch(pLine);

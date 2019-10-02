@@ -81,6 +81,9 @@ namespace ORB_SLAM2 {
 		// Update coplanar line3ds infos. 
 		void UpdateCoplanarLine3d();
 
+		void SetIsSelected(bool bSelect) { bIsSelected = bSelect; };
+		bool GetIsSelected() { return bIsSelected; };
+
 	private:
 		// Position in plucker coordinate & world coordinate
 		cv::Mat mPlucker, mEndPts;
@@ -102,6 +105,9 @@ namespace ORB_SLAM2 {
 
 		// number of coplanar lines
 		int nCoPlanarLine3ds;
+
+		// just for viz. 
+		bool bIsSelected;
 
 #ifdef FUNC_MAP_SAVE_LOAD
 	public:

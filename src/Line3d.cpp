@@ -5,7 +5,7 @@ namespace ORB_SLAM2 {
 	//Describes 3D lines. 
 	Line3d::Line3d() {}
 
-	Line3d::Line3d(cv::Mat &_plucker, cv::Mat &_endPts, Map* pMap) :mPlucker(_plucker), mEndPts(_endPts), mpMap(pMap), nObs(0), nCoPlanarLine3ds(0){}
+	Line3d::Line3d(cv::Mat &_plucker, cv::Mat &_endPts, Map* pMap) :mPlucker(_plucker), mEndPts(_endPts), mpMap(pMap), nObs(0), nCoPlanarLine3ds(0), bIsSelected(false){}
 
 	Line3d::~Line3d() {
 
@@ -284,6 +284,7 @@ namespace ORB_SLAM2 {
 		ar & mCPLineObservations;
 		ar & msCoplanarLine3ds;
 		ar & nCoPlanarLine3ds;
+		ar & bIsSelected;
 
 		//ar & mnId & nNextId & mnFirstKFid & mnFirstFrame & nObs;
 		//// Tracking related vars

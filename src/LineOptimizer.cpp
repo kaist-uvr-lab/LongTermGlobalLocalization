@@ -218,8 +218,9 @@ namespace ORB_SLAM2{
 		map<Line3d*, int> mpLines;
 		vector<Line3d*> vpLines = pMap->GetLine3ds();
 		//int nID = 0;
-		for (int i = 0; i < vpLines.size(); i++) {
-			
+		for (int i = 0; i < 5; i++) {
+		//for (int i = 0; i < vpLines.size(); i++) {
+			vpLines[i]->SetIsSelected(true);
 			g2o::LineVertex* pLineVertex = new g2o::LineVertex();
 			//플리커 코디네잇에서 변환하는 과정
 			pLineVertex->setEstimate(g2o::LineConverter::ConvertParam(vpLines[i]->GetPluckerWorld()));
@@ -243,8 +244,10 @@ namespace ORB_SLAM2{
 
 			//add junction edge
 			auto spCPs = pLine->GetCoplanarLine3d();
+
 			for (auto iter = spCPs.begin(); iter != spCPs.end(); iter++) {
 				Line3d* pLine2 = *iter;
+				pLine2->SetIsSelected(true);
 				auto findres = mpLines.find(pLine2);
 				
 				if (findres != mpLines.end()) {
