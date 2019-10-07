@@ -1088,6 +1088,9 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 		pLine->UpdateEndpts();
 	}
 
+	cout << "Wait for key.... " << endl;
+	std::cin >> wait;
+
 	LineOptimizer::LineJunctionOptimization(_mpMap);
 
 

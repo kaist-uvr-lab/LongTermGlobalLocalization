@@ -264,8 +264,9 @@ namespace  g2o {
 		Vector3d Nw2 = Lw2.head(3);
 		Vector3d Dw2 = Lw2.tail(3);
 
-		Vector3d tempCross = Dw1.cross(Dw2);
-		_error[0] = 10 * (Nw1.dot(Dw2) + Nw2.dot(Dw1)) / tempCross.norm();
+		//Vector3d tempCross = Dw1.cross(Dw2);
+		Vector3d tempCross = SKEW(Dw1)*Dw2;
+		_error[0] = (Nw1.dot(Dw2) + Nw2.dot(Dw1)) / tempCross.norm();
 
 	}
 	void LineJunctionOptimizationEdge::linearizeOplus() {
@@ -326,9 +327,9 @@ namespace  g2o {
 		Jr1[5] = Dw2(2) / K;
 
 		Vector6d Jr2 = Vector6d::Zero();
-		Jr2[0] = Nw1[0] / K + (-S(1) * Dw1(2) + S(2)*Dw1(1))*A / K3;
-		Jr2[1] = Nw1[1] / K + (-S(2) * Dw1(0) + S(0)*Dw1(2))*A / K3;
-		Jr2[2] = Nw1[2] / K + (-S(0) * Dw1(1) + S(1)*Dw1(0))*A / K3;
+		Jr2[0] = Nw1[0] / K + (S(1) * Dw1(2) - S(2)*Dw1(1))*A / K3;
+		Jr2[1] = Nw1[1] / K + (S(2) * Dw1(0) - S(0)*Dw1(2))*A / K3;
+		Jr2[2] = Nw1[2] / K + (S(0) * Dw1(1) - S(1)*Dw1(0))*A / K3;
 		Jr2[3] = Dw1(0) / K;
 		Jr2[4] = Dw1(1) / K;
 		Jr2[5] = Dw1(2) / K;
@@ -338,7 +339,14 @@ namespace  g2o {
 		_jacobianOplusXj = Jr2.transpose()*JLw2;
 
 	}
-
+	/*
+	res.at<float>(0, 1) = -mat.at<float>(2);
+		res.at<float>(1, 0) = mat.at<float>(2);
+		res.at<float>(0, 2) = mat.at<float>(1);
+		res.at<float>(2, 0) = -mat.at<float>(1);
+		res.at<float>(1, 2) = -mat.at<float>(0);
+		res.at<float>(2, 1) = mat.at<float>(0);
+	*/
 	Matrix3d LineJunctionOptimizationEdge::SKEW(Vector3d src) {
 		Matrix3d res = Matrix3d(3, 3);
 		res << 0, -src[2], src[1], src[2], 0, -src[0], -src[1], src[0], 0;

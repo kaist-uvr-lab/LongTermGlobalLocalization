@@ -207,8 +207,10 @@ namespace ORB_SLAM2{
 		g2o::BlockSolver_4_4::LinearSolverType * linearSolver;
 		linearSolver = new g2o::LinearSolverDense<g2o::BlockSolver_4_4::PoseMatrixType>();
 		g2o::BlockSolver_4_4 * solver_ptr = new g2o::BlockSolver_4_4(linearSolver);
-		//solver_ptr->setSchur(false);
+		solver_ptr->setSchur(false);
 		std::cout << "schur==" << solver_ptr->schur()<< std::endl;
+		//Sg2o::Solver* solver_ptr = new g2o::Solver();
+		
 		g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(solver_ptr);
 		optimizer.setAlgorithm(solver);
 
@@ -255,7 +257,12 @@ namespace ORB_SLAM2{
 					e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[i]));
 					e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[idx2]));
 					e->setInformation(Eigen::Matrix<double, 1, 1>::Identity());
-					//optimizer.addEdge(e);
+
+					g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
+					rk->setDelta(deltaMono);
+					e->setRobustKernel(rk);
+
+					optimizer.addEdge(e);
 					vpLineJunctionEdges.push_back(e);
 					//std::cout << "success::" << i << ", " << idx2 << std::endl;
 				}
@@ -341,8 +348,6 @@ namespace ORB_SLAM2{
 				optimizer.addEdge(e);
 				vpEdgesLineOptimization.push_back(e);
 
-				//e->computeError();
-
 				//추가적으로 필요한 값 설정
 				//T : Lw를 Lc로 변경하기 위한 것
 				//K : Lc를 이미지에 프로젝션하기 위한 것
@@ -351,7 +356,7 @@ namespace ORB_SLAM2{
 		}//for vplines
 
 		const float chi2Mono[4] = { 5.991,5.991,5.991,5.991 };
-		const int its[4] = { 10,10,10,10 };
+		const int its[4] = { 50,50,50,50 };
 
 		for (size_t it = 0; it < 4; it++)
 		{
@@ -376,6 +381,7 @@ namespace ORB_SLAM2{
 			}
 			//vpEdgesLineOptimization
 			std::cout << "init::" << it << "::total= " << err0_0 << " line = " << err0_1 << std::endl;
+			std::cout << "avg::before::" << err0_0 / vpEdgesLineOptimization.size() << std::endl;
 
 			optimizer.initializeOptimization(0);
 			optimizer.optimize(its[it]);
@@ -384,7 +390,7 @@ namespace ORB_SLAM2{
 			for (int i = 0; i < vpLineJunctionEdges.size(); i++) {
 				vpLineJunctionEdges[i]->computeError();
 				double chi2 = vpLineJunctionEdges[i]->chi2();
-				//std::cout << "edge::" << i << "::" << chi2 << std::endl;
+				std::cout << "junction edge::" << i << "::" << chi2 << std::endl;
 				err1 += chi2;
 			}
 			for (int i = 0; i < vpEdgesLineOptimization.size(); i++) {
@@ -395,6 +401,8 @@ namespace ORB_SLAM2{
 			}
 			//vpEdgesLineOptimization
 			std::cout << "iter::" << it << "::total=" << err1<<", "<<err2 << std::endl;
+			std::cout << "avg::after::" << err1 / vpEdgesLineOptimization.size() << std::endl;
+
 		}
 
 		//restore line data

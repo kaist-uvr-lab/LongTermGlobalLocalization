@@ -353,8 +353,13 @@ bool BlockSolver<Traits>::updateStructure(const std::vector<HyperGraph::Vertex*>
 template <typename Traits>
 bool BlockSolver<Traits>::solve(){
   //cerr << __PRETTY_FUNCTION__ << endl;
+	//std::cout << "Hpp=" << *_Hpp << std::endl;
+	//std::cout << "Hpl=" << *_Hpl << std::endl;
+	//std::cout <<"Hll="<< *_Hll << std::endl;
+
   if (! _doSchur){
     double t=get_monotonic_time();
+	
     bool ok = _linearSolver->solve(*_Hpp, _x, _b);
     G2OBatchStatistics* globalStats = G2OBatchStatistics::globalStats();
     if (globalStats) {
