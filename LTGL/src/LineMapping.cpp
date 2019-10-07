@@ -561,7 +561,6 @@ void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap) {
 				// Erase all of coplanar observation for given Line3d on given KF.
 				pCurrentLine3d->EraseCPObservations(pTmpKF, sCurrentLine3dIdx);
 			}
-
 			delete pCurrentLine3d;
 			continue;
 		}
@@ -636,7 +635,6 @@ void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap) {
 				pTmpKF->EraseLine3dMatch(pCurrentLine3d);
 				// Erase all of 2d coplanar observations in Line3ds that are coplanar with this line.
 				pCurrentLine3d->EraseCPObservations(pTmpKF, sCurrentLine3dIdx);
-
 			}
 			delete pCurrentLine3d;
 			continue;
@@ -1041,7 +1039,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 
 	cout << "Wait for key.... " << endl;
 	char wait;
-	std::cin >> wait;
+	//std::cin >> wait;
 
 	/************Search proper inital line parameter via RANSAC *****************************/
 	cout << "----Initializing lines via RANSAC.. ----" << endl;
@@ -1115,12 +1113,12 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	}
 
 	// Test whether coplanar lines are correct. 
-	bool testCPlines = true;
+	bool testCPlines = false;
 	if (testCPlines) {
 		vector<Line3d*> testLine3d = _mpMap->GetLine3ds();
 		for (vector<ORB_SLAM2::Line3d*>::iterator vit = testLine3d.begin(), vend = testLine3d.end(); vit != vend; vit++) {
 			Line3d* pLine = *vit;
-			if (!pLine)
+			if (!pLine)    
 				continue;
 
 			map<KeyFrame*, set<size_t>> setLineTest = pLine->GetCPLineObservations();
@@ -1177,13 +1175,14 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			map<KeyFrame*, size_t> tmpObs = pLine->GetObservations();
 			for (map<KeyFrame*, size_t>::iterator mObsIt = tmpObs.begin(), mObsEnd = tmpObs.end(); mObsIt != mObsEnd; mObsIt++) {
 				KeyFrame* pTmpKF = mObsIt->first;
-				size_t sCurrentLine3dIdx = mObsEnd->second;
+				size_t sCurrentLine3dIdx = mObsIt->second;
 
 				//Erase 3d line observation.
 				pTmpKF->EraseLine3dMatch(pLine);
 				// Erase all of 2d coplanar observations in Line3ds that are coplanar with this line.
 				pLine->EraseCPObservations(pTmpKF, sCurrentLine3dIdx);
 			}
+			delete pLine;
 			continue;
 		}
 		//ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
@@ -1202,9 +1201,9 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 	numberLinesBefore = (_mpMap->GetLine3ds()).size();
 	cout << "----" << numberLinesBefore << " of lines were left after optimization.. \n" << endl;
 
-	// Save the map after optimization. 
-	save_mode = 2; // SAVE_MODE : ONLY_MAP(0), LINE_MAP_NOT_OPT(1), LINE_MAP_OPT(2)
-	SLAM.SaveMap(save_mode);
+	//// Save the map after optimization. 
+	//save_mode = 2; // SAVE_MODE : ONLY_MAP(0), LINE_MAP_NOT_OPT(1), LINE_MAP_OPT(2)
+	//SLAM.SaveMap(save_mode);
 
 	cout << "Wait for key.... " << endl;
 	std::cin >> wait;

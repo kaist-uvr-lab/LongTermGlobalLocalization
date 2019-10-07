@@ -267,7 +267,7 @@ namespace  g2o {
 		Vector3d tempCross = Dw1.cross(Dw2);
 		if (tempCross.norm() < 0.00001)
 			int a = 1;
-		_error[0] = 10 * (Nw1.dot(Dw2) + Nw2.dot(Dw1)) / tempCross.norm();
+		_error[0] = (Nw1.dot(Dw2) + Nw2.dot(Dw1)) / tempCross.norm();
 
 		if (_error[0] > 1000)
 			int a = 1;

@@ -212,25 +212,45 @@ namespace ORB_SLAM2{
 		g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(solver_ptr);
 		optimizer.setAlgorithm(solver);
 
-		//Add Line Vertex
-		
+		//Add Line Vertex		
 		vector<g2o::LineVertex*> vpLineVertices;
 		map<Line3d*, int> mpLines;
 		vector<Line3d*> vpLines = pMap->GetLine3ds();
+		int nLines = 1;
+		int nCPLines = 0;
+		vector<Line3d*> vTmpLines;
+
+		int idx = 0;
+		// Test with only one lines. 
+		for (int i = 0; i < vpLines.size(); i++) {
+			set<Line3d*> vL3d = vpLines[i]->GetCoplanarLine3d();
+			if (vL3d.size() == 3) {
+				idx = i;
+				
+				vTmpLines.push_back(vpLines[i]);
+				for (set<Line3d*>::iterator sit = vL3d.begin(), send = vL3d.end(); sit != send; sit++) {
+					vTmpLines.push_back(*sit);
+				}
+				nCPLines = vL3d.size() + 1;
+				break;
+			}
+		}
+
 		//int nID = 0;
-		for (int i = 0; i < 1; i++) {
+		for (int i = 0; i < nCPLines; i++) {
 		//for (int i = 0; i < vpLines.size(); i++) {
-			vpLines[i]->SetIsSelected(true);
+			vTmpLines[i]->SetIsSelected(true);
 			g2o::LineVertex* pLineVertex = new g2o::LineVertex();
 			//플리커 코디네잇에서 변환하는 과정
-			pLineVertex->setEstimate(g2o::LineConverter::ConvertParam(vpLines[i]->GetPluckerWorld()));
+			pLineVertex->setEstimate(g2o::LineConverter::ConvertParam(vTmpLines[i]->GetPluckerWorld()));
 			pLineVertex->setId(i);
 			pLineVertex->setFixed(false);
 			//pLineVertex->setMarginalized(true);
 			optimizer.addVertex(pLineVertex);
 			vpLineVertices.push_back(pLineVertex);
-			mpLines.insert(make_pair(vpLines[i],i));
+			mpLines.insert(make_pair(vTmpLines[i],i));
 		}
+
 		std::cout << "test::" << mpLines.size() << ", " << vpLineVertices.size() << std::endl;
 
 		//chi값의 설정 필요
@@ -239,19 +259,23 @@ namespace ORB_SLAM2{
 		std::vector<g2o::EdgeLineOptimization*> vpEdgesLineOptimization;
 		vector<g2o::LineJunctionOptimizationEdge*> vpLineJunctionEdges;
 
-		for (int i = 0; i < vpLineVertices.size(); i++) {
-			Line3d* pLine = vpLines[i];
+		for (int i = 0; i < 1; i++) {
+			Line3d* pLine = vpLines[idx];
 
 			//add junction edge
 			auto spCPs = pLine->GetCoplanarLine3d();
 
 			for (auto iter = spCPs.begin(); iter != spCPs.end(); iter++) {
+
 				Line3d* pLine2 = *iter;
+				if (find(vTmpLines.begin(), vTmpLines.end(), pLine2) == vTmpLines.end())
+					continue;
+
 				pLine2->SetIsSelected(true);
 				auto findres = mpLines.find(pLine2);
-				
+
 				if (findres != mpLines.end()) {
-					
+
 					int idx2 = mpLines[pLine2];
 					g2o::LineJunctionOptimizationEdge* e = new g2o::LineJunctionOptimizationEdge();
 					e->setLevel(0);
@@ -352,6 +376,124 @@ namespace ORB_SLAM2{
 				//end points 설정 3x1 2개이면 될 듯
 			}//for observations
 		}//for vplines
+
+		//for (int i = 0; i < vpLineVertices.size(); i++) {
+		//	Line3d* pLine = vpLines[idx];
+
+		//	//add junction edge
+		//	auto spCPs = pLine->GetCoplanarLine3d();
+
+		//	for (auto iter = spCPs.begin(); iter != spCPs.end(); iter++) {
+
+		//		Line3d* pLine2 = *iter;
+		//		if (find(vTmpLines.begin(), vTmpLines.end(), pLine2) == vTmpLines.end())
+		//			continue;
+
+		//		pLine2->SetIsSelected(true);
+		//		auto findres = mpLines.find(pLine2);
+		//		
+		//		if (findres != mpLines.end()) {
+		//			
+		//			int idx2 = mpLines[pLine2];
+		//			g2o::LineJunctionOptimizationEdge* e = new g2o::LineJunctionOptimizationEdge();
+		//			e->setLevel(0);
+		//			e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[i]));
+		//			e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[idx2]));
+		//			e->setInformation(Eigen::Matrix<double, 1, 1>::Identity());
+		//			optimizer.addEdge(e);
+		//			vpLineJunctionEdges.push_back(e);
+		//			//std::cout << "success::" << i << ", " << idx2 << std::endl;
+		//		}
+		//		else {
+		//			if (pLine2) {
+		//				//std::cout << "error case ::" << pLine2->GetNumObservations() << std::endl;
+		//			}
+		//		}
+		//	}
+
+		//	//add line edge
+		//	auto mObservations = pLine->GetObservations();
+		//	for (auto iter = mObservations.begin(); iter != mObservations.end(); iter++) {
+
+		//		KeyFrame* pKF = iter->first;
+		//		int idx = iter->second;
+
+		//		cv::Mat R = pKF->GetRotation();
+		//		cv::Mat t = pKF->GetTranslation();
+
+		//		cv::Mat SkewT = SKEW(t);
+		//		SkewT *= R;
+
+		//		cv::Mat K = pKF->mK.clone();
+		//		cv::Mat line2D = pKF->Get2DLine(idx);
+
+		//		cv::Mat spt = cv::Mat::ones(3, 1, CV_32FC1);
+		//		spt.at<float>(0) = line2D.at<float>(0);
+		//		spt.at<float>(1) = line2D.at<float>(1);
+		//		cv::Mat ept = cv::Mat::ones(3, 1, CV_32FC1);
+		//		ept.at<float>(0) = line2D.at<float>(2);
+		//		ept.at<float>(1) = line2D.at<float>(3);
+
+		//		cv::Mat T = cv::Mat::zeros(6, 6, CV_32FC1);
+		//		R.copyTo(T.colRange(0, 3).rowRange(0, 3));
+		//		R.copyTo(T.colRange(3, 6).rowRange(3, 6));
+		//		SkewT.copyTo(T.colRange(3, 6).rowRange(0, 3));
+
+		//		g2o::EdgeLineOptimization* e = new g2o::EdgeLineOptimization();
+		//		e->setLevel(0);
+		//		e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(i)));
+
+		//		e->spt << spt.at<float>(0), spt.at<float>(1), spt.at<float>(2);
+		//		e->ept << ept.at<float>(0), ept.at<float>(1), ept.at<float>(2);
+		//		float dx = spt.at<float>(0) - ept.at<float>(0);
+		//		float dy = spt.at<float>(1) - ept.at<float>(1);
+		//		float length = sqrt(dx*dx + dy*dy);
+		//		float alpha = 100;
+		//		/*e->length = length;
+		//		e->alpha = alpha;*/
+		//		e->length = 1;
+		//		e->alpha = 1;
+
+		//		e->setInformation(Eigen::Matrix2d::Identity());
+		//		g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
+		//		//rk->setDelta(deltaMono);
+		//		// Set adaptive threshold for huber cost function.
+		//		rk->setDelta(deltaMono * alpha / length);
+		//		e->setRobustKernel(rk);
+
+		//		//e->T = Eigen::Matrix<double, 6, 6>(T.data);
+
+		//		//float fx = pKF->fx;
+		//		//float fy = pKF->fy;
+		//		//float cx = pKF->cx;
+		//		//float cy = pKF->cy;
+		//		float fx = K.at<float>(0, 0);
+		//		float fy = K.at<float>(1, 1);
+		//		float cx = K.at<float>(0, 2);
+		//		float cy = K.at<float>(1, 2);
+		//		cv::Mat eK = cv::Mat::zeros(3, 3, CV_32FC1);
+		//		eK.at<float>(0, 0) = fy;
+		//		eK.at<float>(1, 1) = fx;
+		//		eK.at<float>(2, 0) = -fy*cx;
+		//		eK.at<float>(2, 1) = -fx*cy;
+		//		eK.at<float>(2, 2) = fx*fy;
+
+		//		cv::cv2eigen(T, e->T);
+		//		cv::cv2eigen(eK, e->K);
+
+		//		//std::cout << e->T<<T << std::endl;
+
+		//		//optimizer.addEdge(e);
+		//		vpEdgesLineOptimization.push_back(e);
+
+		//		//e->computeError();
+
+		//		//추가적으로 필요한 값 설정
+		//		//T : Lw를 Lc로 변경하기 위한 것
+		//		//K : Lc를 이미지에 프로젝션하기 위한 것
+		//		//end points 설정 3x1 2개이면 될 듯
+		//	}//for observations
+		//}//for vplines
 
 		const float chi2Mono[4] = { 5.991,5.991,5.991,5.991 };
 		const int its[4] = { 10,10,10,10 };
