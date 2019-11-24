@@ -98,7 +98,7 @@ void LineMapping::ComputeImageBounds(const cv::Mat &K, const cv::Mat &distCoef, 
 		cv::undistortPoints(mat, mat, K, distCoef, cv::Mat(), K);
 		mat = mat.reshape(1);
 
-		float buff = 3.0;
+		float buff = 5.0;
 
 		mnMinX = min(mat.at<float>(0, 0), mat.at<float>(2, 0)) + buff;
 		mnMaxX = max(mat.at<float>(1, 0), mat.at<float>(3, 0)) - buff;
@@ -561,7 +561,7 @@ void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap) {
 				// Erase all of coplanar observation for given Line3d on given KF.
 				pCurrentLine3d->EraseCPObservations(pTmpKF, sCurrentLine3dIdx);
 			}
-			delete pCurrentLine3d;
+			//delete pCurrentLine3d;
 			continue;
 		}
 
@@ -636,7 +636,7 @@ void LineMapping::InitializeLine3dRANSAC(vector<KeyFrame*> _vKFs, Map *_mpMap) {
 				// Erase all of 2d coplanar observations in Line3ds that are coplanar with this line.
 				pCurrentLine3d->EraseCPObservations(pTmpKF, sCurrentLine3dIdx);
 			}
-			delete pCurrentLine3d;
+			//delete pCurrentLine3d;
 			continue;
 		}
 
@@ -930,7 +930,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 				// Use LSD. 
 				string strImgName = imgDir + "/" + vstrImageFilenames[pCurrentKF->mnFrameId];
 				char* imgName = &strImgName[0];
-				lineMatching->detectLine(imgName, lines, 0);
+				lineMatching->detectLine(imgName, lines, 30);
 			}
 
 			//Remove lines extracted on the boundary(caused by undistortion.)
@@ -988,7 +988,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 				// Perform Line Matching First. 
 				string strImgName2 = imgDir + "/" + vstrImageFilenames[pTmpKF->mnFrameId];
 				char* imgName2 = &strImgName2[0];
-
+				cout << "Processing " << count << " KF / " << vpKFS.size() << " total KFs " << endl;
 				cout << imgName1 << endl;
 				cout << imgName2 << endl;
 
@@ -1106,7 +1106,7 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 				// Erase 3d coplanar line information.
 				pTmpLine->EraseCoplanarLine3d(pLine);
 			}
-			delete pLine;
+			//delete pLine;
 			continue;
 		}
 		pLine->UpdateEndpts();
@@ -1135,9 +1135,11 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 
 				set<Line3d*> setLine3ds = pLine->GetCoplanarLine3d();
 				pLine->SetIsSelected(true);
+				pLine->SetColor(2);
 
 				for (set<Line3d*>::iterator sit = setLine3ds.begin(), send = setLine3ds.end(); sit != send; sit++) {
 					(*sit)->SetIsSelected(true);
+					(*sit)->SetColor(1);
 				}
 
 				line(im, Point(currentLine.at<float>(0), currentLine.at<float>(1)), Point(currentLine.at<float>(2), currentLine.at<float>(3)), Scalar(0, 0, 255), 2);
@@ -1154,9 +1156,10 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 			set<Line3d*> setLine3ds = pLine->GetCoplanarLine3d();
 			for (set<Line3d*>::iterator sit = setLine3ds.begin(), send = setLine3ds.end(); sit != send; sit++) {
 				(*sit)->SetIsSelected(false);
+				(*sit)->SetColor(0);
 			}
 			pLine->SetIsSelected(false);
-
+			pLine->SetColor(0);
 		}
 	}
 
@@ -1182,17 +1185,17 @@ int LineMapping::LineRegistration(ORB_SLAM2::System &SLAM, vector<string> &vstrI
 				// Erase all of 2d coplanar observations in Line3ds that are coplanar with this line.
 				pLine->EraseCPObservations(pTmpKF, sCurrentLine3dIdx);
 			}
-			delete pLine;
+			//delete pLine;
 			continue;
 		}
-		//ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
-		//pLine->UpdateEndpts();
+		ORB_SLAM2::LineOptimizer::LineOptimization(pLine);
+		pLine->UpdateEndpts();
 	}
 
 	cout << "Wait for key.... " << endl;
 	std::cin >> wait;
 
-	ORB_SLAM2::LineOptimizer::LineJunctionOptimization(_mpMap);
+	//ORB_SLAM2::LineOptimizer::LineJunctionOptimization(_mpMap);
 
 	cout << "Wait for key.... " << endl;
 	std::cin >> wait;

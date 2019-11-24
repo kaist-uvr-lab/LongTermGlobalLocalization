@@ -240,6 +240,11 @@ namespace ORB_SLAM2{
 		for (int i = 0; i < nCPLines; i++) {
 		//for (int i = 0; i < vpLines.size(); i++) {
 			vTmpLines[i]->SetIsSelected(true);
+			if (i==0)
+				vTmpLines[i]->SetColor(2);
+			else
+				vTmpLines[i]->SetColor(1);
+
 			g2o::LineVertex* pLineVertex = new g2o::LineVertex();
 			//플리커 코디네잇에서 변환하는 과정
 			pLineVertex->setEstimate(g2o::LineConverter::ConvertParam(vTmpLines[i]->GetPluckerWorld()));
@@ -271,7 +276,9 @@ namespace ORB_SLAM2{
 				if (find(vTmpLines.begin(), vTmpLines.end(), pLine2) == vTmpLines.end())
 					continue;
 
-				pLine2->SetIsSelected(true);
+				//pLine2->SetIsSelected(true);
+				//pLine2->SetColor(1);
+
 				auto findres = mpLines.find(pLine2);
 
 				if (findres != mpLines.end()) {

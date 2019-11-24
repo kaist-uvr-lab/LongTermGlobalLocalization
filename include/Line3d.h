@@ -83,6 +83,8 @@ namespace ORB_SLAM2 {
 
 		void SetIsSelected(bool bSelect) { bIsSelected = bSelect; };
 		bool GetIsSelected() { return bIsSelected; };
+		void SetColor(int colorIdx) { nColor = colorIdx; };
+		int GetColor() { return nColor; }
 
 	private:
 		// Position in plucker coordinate & world coordinate
@@ -109,6 +111,7 @@ namespace ORB_SLAM2 {
 
 		// just for viz. 
 		bool bIsSelected;
+		int nColor;
 
 #ifdef FUNC_MAP_SAVE_LOAD
 	public:

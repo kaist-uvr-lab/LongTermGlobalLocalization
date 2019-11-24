@@ -267,7 +267,7 @@ namespace  g2o {
 		Vector3d tempCross = Dw1.cross(Dw2);
 		if (tempCross.norm() < 0.00001)
 			int a = 1;
-		_error[0] = (Nw1.dot(Dw2) + Nw2.dot(Dw1)) / tempCross.norm();
+		_error[0] = abs(Nw1.dot(Dw2) + Nw2.dot(Dw1)) / tempCross.norm();
 
 		if (_error[0] > 1000)
 			int a = 1;
@@ -330,13 +330,17 @@ namespace  g2o {
 		Jr1[5] = Dw2(2) / K;
 
 		Vector6d Jr2 = Vector6d::Zero();
-		Jr2[0] = Nw1[0] / K + -(-S(1) * Dw1(2) + S(2)*Dw1(1))*A / K3;
-		Jr2[1] = Nw1[1] / K + -(-S(2) * Dw1(0) + S(0)*Dw1(2))*A / K3;
-		Jr2[2] = Nw1[2] / K + -(-S(0) * Dw1(1) + S(1)*Dw1(0))*A / K3;
+		Jr2[0] = Nw1[0] / K + (S(1) * Dw1(2) - S(2)*Dw1(1))*A / K3;
+		Jr2[1] = Nw1[1] / K + (S(2) * Dw1(0) - S(0)*Dw1(2))*A / K3;
+		Jr2[2] = Nw1[2] / K + (S(0) * Dw1(1) - S(1)*Dw1(0))*A / K3;
 		Jr2[3] = Dw1(0) / K;
 		Jr2[4] = Dw1(1) / K;
 		Jr2[5] = Dw1(2) / K;
 
+		if (A < 0) {
+			Jr1 = -Jr1;
+			Jr2 = -Jr2;
+		}
 		//Jacobian Lr/Lo
 		_jacobianOplusXi = Jr1.transpose()*JLw1;
 		_jacobianOplusXj = Jr2.transpose()*JLw2;

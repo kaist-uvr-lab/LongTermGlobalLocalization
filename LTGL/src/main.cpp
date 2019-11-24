@@ -445,6 +445,7 @@ void LoadImages(const string &strFile, vector<string> &vstrImageFilenames, vecto
 	ifstream f;
 	f.open(strFile.c_str());
 	cout << "Loading images ... ";
+	cout << strFile << endl;
 
 	// skip first three lines
 	string s0;
