@@ -445,6 +445,7 @@ void LoadImages(const string &strFile, vector<string> &vstrImageFilenames, vecto
 	ifstream f;
 	f.open(strFile.c_str());
 	cout << "Loading images ... ";
+	cout << strFile << endl;
 
 	// skip first three lines
 	string s0;
@@ -625,7 +626,7 @@ int main(int argc, char **argv)
 	if (vm.count("RANSAC")) { cout << "Use RANSAC in initialization for line registration " << endl; }
 	if (vm.count("LSD")) { cout << "Uses LSD for line extraction." << endl << endl; }
 
-
+	
 	// System Variables.
 	vector<string> vstrImageFilenames;
 	vector<double> vTimestamps;
@@ -666,12 +667,13 @@ int main(int argc, char **argv)
 	// Write KF information into txt file (for further processing in python.)
 	writeKFinfo = imgDir + "/undistort/KFinfo.txt";
 	lineDir = imgDir + "/results";
-
+	std::cout << "11111" << std::endl;
 	// Create SLAM system. It initializes all system threads and gets ready to process frames.
 	ORB_SLAM2::System SLAM(vocabDir, paramDir, ORB_SLAM2::System::MONOCULAR, true, bSaveMap);
+	std::cout << "22222" << std::endl;
 	if (SLAM.GetReuseMap())
 		bSuccessLoadMap = true;
-
+	
 	// Generate Global Map using ORB-SLAM. 
 	if (!bSuccessLoadMap) {
 		if (bPoseFromColmap)

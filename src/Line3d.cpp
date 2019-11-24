@@ -5,7 +5,11 @@ namespace ORB_SLAM2 {
 	//Describes 3D lines. 
 	Line3d::Line3d() {}
 
-	Line3d::Line3d(cv::Mat &_plucker, cv::Mat &_endPts, Map* pMap) :mPlucker(_plucker), mEndPts(_endPts), mpMap(pMap), nObs(0) {}
+	Line3d::Line3d(cv::Mat &_plucker, cv::Mat &_endPts, Map* pMap) :mPlucker(_plucker), mEndPts(_endPts), mpMap(pMap), nObs(0), nCoPlanarLine3ds(0), bIsSelected(false), nColor(0){}
+
+	Line3d::~Line3d() {
+
+	}
 
 	void Line3d::AddObservation(KeyFrame* pKF, size_t idx)
 	{
@@ -14,7 +18,6 @@ namespace ORB_SLAM2 {
 		mLineObservations[pKF] = idx;
 		nObs++;
 	}
-
 	void Line3d::EraseObservation(KeyFrame* pKF)
 	{
 		bool bBad = false;
@@ -31,6 +34,90 @@ namespace ORB_SLAM2 {
 			}
 		}
 	}
+	
+	void Line3d::AddCPObservation(KeyFrame* pKF, set<size_t> vIndices)
+	{
+		set<size_t> stmpIdx = vIndices;
+		for (set<size_t>::iterator sit = stmpIdx.begin(), send = stmpIdx.end(); sit != send; sit++) {
+			mCPLineObservations[pKF].insert(*sit);
+		}
+	}
+
+	void Line3d::EraseSingleCPObservation(KeyFrame* pKF, size_t idx) {
+		set<size_t>::iterator findIdx = mCPLineObservations[pKF].find(idx);
+		if (findIdx != mCPLineObservations[pKF].end()) {
+			mCPLineObservations[pKF].erase(findIdx);
+		}
+	}
+
+	void Line3d::EraseKFCPObservation(KeyFrame* pKF) {		
+		mCPLineObservations.erase(pKF);
+	}
+
+	void Line3d::EraseCPObservations(KeyFrame* pKF, size_t idx)
+	{
+		// For given KF, erase all of 2d coplanar observations for Line3ds coplanar with this line.
+		set<size_t> stmpIdx = mCPLineObservations[pKF];
+
+		for (set<size_t>::iterator sit = stmpIdx.begin(), send = stmpIdx.end(); sit != send; sit++) {
+			// Get index of coplanar 2d lines in each of KF that observes given Line3d. 
+			size_t tmpIdx = *sit;
+			Line3d *pLine3d = pKF->Get3DLine(tmpIdx);
+			if (!pLine3d)
+				continue;
+
+			pLine3d->EraseSingleCPObservation(pKF, idx);
+		}
+		this->EraseKFCPObservation(pKF);
+
+		////for check.
+		//for (set<size_t>::iterator sit = stmpIdx.begin(), send = stmpIdx.end(); sit != send; sit++) {
+		//	size_t tmpIdx = *sit;
+		//	Line3d *pLine3d = pKF->Get3DLine(tmpIdx);
+		//	if (!pLine3d)
+		//		continue;
+		//	map<KeyFrame*, set<size_t>> tt = pLine3d->GetCPLineObservations();
+		//	for (map<KeyFrame*, set<size_t>>::iterator mit = tt.begin(), mend = tt.end(); mit != mend;mit++){
+		//		if ((mit->second).size() == 0) {
+		//			int abc = 1;
+		//		}
+		//	}
+
+		//}
+
+	}
+
+	map<KeyFrame*, set<size_t>> Line3d::GetCPLineObservations() {
+		return mCPLineObservations;
+	}
+
+	set<size_t> Line3d::GetCPLineObservations(KeyFrame *pKF) {
+		return mCPLineObservations[pKF];
+	}
+
+
+
+	void Line3d::UpdateCoplanarLine3d() {
+		msCoplanarLine3ds.clear();
+		mmapCPLine3ds.clear();
+		// For all observations, gather coplanar 2d lines and finally update coplanar 3d lines. 
+		for (map<KeyFrame*, size_t>::iterator mit = mLineObservations.begin(), mend = mLineObservations.end(); mit != mend; mit++) {
+			KeyFrame* pTmpKF = mit->first;
+			size_t sTmpIdx = mit->second;
+
+			set<size_t> sCPLineObervation = mCPLineObservations[pTmpKF];
+			for (set<size_t>::iterator sit = sCPLineObervation.begin(), send = sCPLineObervation.end(); sit != send; sit++) {
+				Line3d *pTmpLine3d = pTmpKF->Get3DLine(*sit);
+				if (!pTmpLine3d)
+					continue;
+				
+				if (pTmpLine3d == this)
+					continue;
+				AddCoplanarLine3d(pTmpLine3d);
+			}
+		}
+	}
+
 	void Line3d::UpdateEndpts() {
 		//Update all of the endpts. 
 		cv::Mat tmpAllEndpts;
@@ -172,12 +259,25 @@ namespace ORB_SLAM2 {
 
 	// Add Coplanar lines.
 	void Line3d::AddCoplanarLine3d(Line3d* pLine3d) {
-		mvCoplanarLine3ds.push_back(pLine3d);
+		if (mmapCPLine3ds.count(pLine3d)) {
+			mmapCPLine3ds[pLine3d] += 1;
+		}
+		else
+			mmapCPLine3ds[pLine3d] = 1;
+
+		msCoplanarLine3ds.insert(pLine3d);
 	}
 
+	// Erase Coplanar lines.
+	void Line3d::EraseCoplanarLine3d(Line3d* pLine3d) {
+		msCoplanarLine3ds.erase(pLine3d);
+		mmapCPLine3ds.erase(pLine3d);
+	}
+
+
 	// Get all of the Coplanar lines.
-	vector<Line3d*> Line3d::GetCoplanarLine3d() {
-		return mvCoplanarLine3ds;
+	set<Line3d*> Line3d::GetCoplanarLine3d() {
+		return msCoplanarLine3ds;
 	}
 
 #ifdef FUNC_MAP_SAVE_LOAD
@@ -190,6 +290,11 @@ namespace ORB_SLAM2 {
 		ar & mLineObservations;
 		ar & mpMap;
 		ar & nObs;
+		ar & mCPLineObservations;
+		ar & msCoplanarLine3ds;
+		ar & nCoPlanarLine3ds;
+		ar & bIsSelected;
+		ar & nColor;
 
 		//ar & mnId & nNextId & mnFirstKFid & mnFirstFrame & nObs;
 		//// Tracking related vars

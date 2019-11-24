@@ -324,8 +324,10 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 
 	while (1)
 	{					
-		//cout<<"*********itreration " << nitr<<"**********"<<endl;
+
+		cout<<"*********itreration " << nitr<<"**********"<<endl;
 	    matchSingleLines_homography(hmatThr);
+
 		//cout<<"fan matches after single line propagation:" << vstrFanMatch.size()<<endl;
 		//cout<<"line matches after single line propagation:" << vstrLineMatch.size()<<endl;
 		//cout<<"point matches after single line propagation:" << vstrPointMatch.size()<<endl;
@@ -340,6 +342,7 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 		prenum = newnum;
 		nitr++;	
 	}
+	cout << "\n";
 	mtimer.Stop();
 	mtimer.PrintElapsedTimeMsg(msg);
 	//printf("\nElapsed time for the third stage: %s.\n", msg);
@@ -363,6 +366,80 @@ CLineMatching::CLineMatching(Mat img1,  Mat line1, Mat tnode1, Mat img2,  Mat li
 		plotLineMatches(colorImg1.clone(), colorImg2.clone(), vstrLineMatch, "Final line matches");	
 		waitKey();
 	}
+
+	//// Test junction info. 
+	//int nlineMatches = vstrLineMatch.size();
+	//int cols1 = img1.cols;
+
+	//int color[6][3];
+	//color[0][0] = 255; color[0][1] = 0;  color[0][2] = 0;
+	//color[1][0] = 0;  color[1][1] = 255; color[1][2] = 0;
+	//color[2][0] = 0;  color[2][1] = 0;  color[2][2] = 255;
+	//color[3][0] = 255; color[3][1] = 255; color[3][2] = 0;
+	//color[4][0] = 0; color[4][1] = 255; color[4][2] = 255;
+	//color[5][0] = 255; color[5][1] = 0; color[5][2] = 255;
+
+
+	//for (int i = 0; i < tmpJunctionIdx.rows; i++)
+	//{
+	//	Mat combinedImg;
+	//	//concatenateTwoImgs(img1, img2, combinedImg);
+	//	hconcat(colorImg1.clone(), colorImg2.clone(), combinedImg);
+
+	//	int color_num = rand() % 6;
+	//	int R = color[color_num][0];
+	//	int G = color[color_num][1];
+	//	int B = color[color_num][2];
+
+	//	int ser1_1 = tmpJunctionIdx.row(i).at<int>(0);
+	//	int ser1_2 = tmpJunctionIdx.row(i).at<int>(1);
+	//	int ser2_1 = tmpJunctionIdx.row(i).at<int>(2);
+	//	int ser2_2 = tmpJunctionIdx.row(i).at<int>(3);
+
+	//	Point2f spt1_1 = strline1[ser1_1].ps;
+	//	Point2f ept1_1 = strline1[ser1_1].pe;
+	//	line(combinedImg, spt1_1, ept1_1, cvScalar(R, G, B), 2);
+
+	//	Point2f spt1_2 = strline1[ser1_2].ps;
+	//	Point2f ept1_2 = strline1[ser1_2].pe;
+	//	line(combinedImg, spt1_2, ept1_2, cvScalar(R, G, B), 2);
+
+	//	Point2f spt2_1 = strline2[ser2_1].ps;
+	//	Point2f ept2_1 = strline2[ser2_1].pe;
+	//	spt2_1.x += cols1;
+	//	ept2_1.x += cols1;
+	//	line(combinedImg, spt2_1, ept2_1, cvScalar(R, G, B), 2);
+
+	//	Point2f spt2_2 = strline2[ser2_2].ps;
+	//	Point2f ept2_2 = strline2[ser2_2].pe;
+	//	spt2_2.x += cols1;
+	//	ept2_2.x += cols1;
+	//	line(combinedImg, spt2_2, ept2_2, cvScalar(R, G, B), 2);
+
+	//	//stringstream ss;
+	//	//string str;
+	//	//ss << i;
+	//	//ss >> str;
+	//	//Point2i midpt1, midpt2, tpt;
+	//	//tpt = spt1 + ept1;
+	//	//midpt1.x = (int)tpt.x / 2;
+	//	//midpt1.y = (int)tpt.y / 2;
+	//	//putText(combinedImg, str, midpt1, FONT_HERSHEY_SIMPLEX, 0.5, cvScalar(R, G, B), 1);
+	//	//tpt = spt2 + ept2;
+	//	//midpt2.x = (int)tpt.x / 2;
+	//	//midpt2.y = (int)tpt.y / 2;
+	//	//putText(combinedImg, str, midpt2, FONT_HERSHEY_SIMPLEX, 0.5, cvScalar(R, G, B), 1);
+
+	//	string imgName = "Final line matches";
+	//	imshow(imgName, combinedImg);
+	//	waitKey();
+	//}
+
+
+
+
+
+
 };
 
 void CLineMatching::setJunctionInfo(Mat &junctions, Mat&junctionIdx) {
@@ -737,12 +814,20 @@ void CLineMatching::matchSingleLines_homography(float homDistThr)
 
 	vector<strLine> vMatchedLines1, vMatchedLines2, vUnmatchedLines1, vUnmatchedLines2;
 	bifurcateLines(strline1, strline2, vstrLineMatch, vMatchedLines1, vMatchedLines2, vUnmatchedLines1, vUnmatchedLines2);
-
+	cout << "here singlelines1" << endl;
 	Mat pointMatches;
 	vpointMatch2Mat(vstrPointMatch, pointMatches);
+	cout << "here singlelines2" << endl;
+
 	vector<strFanSection> vMatchedFans1, vMatchedFans2, vUnmatchedFans1, vUnmatchedFans2;
 	bifurcateFans(vstrFanSection1, vstrFanSection2, vstrFanMatch, vMatchedFans1, vMatchedFans2, vUnmatchedFans1, vUnmatchedFans2);
+	cout << "here singlelines2-1" << endl;
 	vector<vector<vector<int> > > vEnteredSingleLines1, vEnteredSingleLines2;
+
+	if (vMatchedFans1.size() == 0 || vMatchedFans2.size() == 0)
+		return;
+
+	cout << "here singlelines2-2" << endl;
 	groupSingleLines(vUnmatchedLines1, vMatchedFans1, nEnterGroups, vEnteredSingleLines1);
 	groupSingleLines(vUnmatchedLines2, vMatchedFans2, nEnterGroups, vEnteredSingleLines2);
 	vector<strFanMatch> vNewFanMatch;
@@ -756,6 +841,7 @@ void CLineMatching::matchSingleLines_homography(float homDistThr)
 	int nfan2 = vstrFanSection2.size();
 
 	int i = 0;
+	cout << "here singlelines2-3" << endl;
 	for (; i < ngroup; i++)
 	{		
 		strFanSection curFan1, curFan2;
@@ -870,6 +956,9 @@ void CLineMatching::matchSingleLines_homography(float homDistThr)
 	{
 		return;
 	}
+
+	cout << "here singlelines3" << endl;
+
 	uniqueLineMatch(vNewLineMatch, vkept);	
 	int num = vNewLineMatch.size();	
 	vector<int> tvfanSer;
@@ -1077,6 +1166,7 @@ void CLineMatching::matchSingleLines_homography(float homDistThr)
 			nfan2++;	
 		}
 
+		cout << "here singlelines4" << endl;
 		uniquePointMatch(vstrPointMatch);	
 	}
 }
@@ -1568,13 +1658,22 @@ void CLineMatching::groupSingleLines(vector<strLine> vUnmatchedLines, vector<str
 {
 	Mat matchedJunctions, nearestJunctions;			
 	int nMatchedFans = vMatchedFans.size();
+	cout << "here singlelines2-2_1" << endl;
 	matchedJunctions.create(nMatchedFans, 2, CV_32F);	 
+	cout << "here singlelines2-2_2" << endl;
 	for (int i = 0; i < nMatchedFans; i++)
 	{
 		float* pdat = matchedJunctions.ptr<float>(i);
 		pdat[0] = vMatchedFans[i].intsection.x;
 		pdat[1] = vMatchedFans[i].intsection.y;
 	}
+
+	if (vUnmatchedLines.size() == 0 || nEnterGroups == 0) {
+		cout << "originally error here" <<endl;
+		return;
+	}
+
+
 	nearestMatchedPointsToLine(vUnmatchedLines, matchedJunctions, nEnterGroups, nearestJunctions);
 	int nunLines = vUnmatchedLines.size();
 	vector<vector<int> > vGroup(nMatchedFans);
@@ -1588,12 +1687,14 @@ void CLineMatching::groupSingleLines(vector<strLine> vUnmatchedLines, vector<str
 			vGroup[ser].push_back(i);
 		}
 	}	
+	cout << "here singlelines2-2_4" << endl;
 	vEnteredSingleLines.resize(nMatchedFans);
 	for (int i = 0; i < nMatchedFans; i++)
 	{
 		vEnteredSingleLines[i].resize(4);
 	}
 
+	cout << "here singlelines2-2_5" << endl;
 	for (int i = 0; i < nMatchedFans; i++)
 	{		
 		vector<int> curGroupLines = vGroup[i];

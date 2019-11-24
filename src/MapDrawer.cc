@@ -46,11 +46,31 @@ namespace ORB_SLAM2
 		const vector<Line3d*> &MLs = mpMap->GetLine3ds();
 
 		glLineWidth(mKeyFrameLineWidth);
-		glColor3f(1.0f, 0.0f, 0.0f);
-		glBegin(GL_LINES);
+
 		for (size_t i = 0, iend = MLs.size(); i < iend; i++)
 		{
 			cv::Mat endPts = MLs[i]->GetEndPts();
+			if (MLs[i]->GetColor() == 0) {
+				glColor3f(1.0f, 0.0f, 0.0f);
+				glBegin(GL_LINES);
+			}
+			else if (MLs[i]->GetColor() == 1){
+				glColor3f(0.0f, 0.0f, 1.0f);
+				glBegin(GL_LINES);
+			}
+			else if (MLs[i]->GetColor() == 2) {
+				glColor3f(0.0f, 1.0f, 0.0f);
+				glBegin(GL_LINES);
+			}
+
+			//if (MLs[i]->GetIsSelected()) {
+			//	glColor3f(0.0f, 0.0f, 1.0f);
+			//	glBegin(GL_LINES);
+			//}
+			//else {
+			//	glColor3f(1.0f, 0.0f, 0.0f);
+			//	glBegin(GL_LINES);
+			//}
 			glVertex3f(endPts.at<float>(0), endPts.at<float>(1), endPts.at<float>(2));
 			glVertex3f(endPts.at<float>(4), endPts.at<float>(5), endPts.at<float>(6));
 		}

@@ -265,8 +265,12 @@ namespace  g2o {
 		Vector3d Dw2 = Lw2.tail(3);
 
 		Vector3d tempCross = Dw1.cross(Dw2);
-		_error[0] = (Nw1.dot(Dw2) + Nw2.dot(Dw1)) / tempCross.norm();
+		if (tempCross.norm() < 0.00001)
+			int a = 1;
+		_error[0] = abs(Nw1.dot(Dw2) + Nw2.dot(Dw1)) / tempCross.norm();
 
+		if (_error[0] > 1000)
+			int a = 1;
 	}
 	void LineJunctionOptimizationEdge::linearizeOplus() {
 		const LineVertex* v1 = static_cast<const LineVertex*>(_vertices[0]);
@@ -302,19 +306,19 @@ namespace  g2o {
 		//Jacobian Lw/Lo
 		MatrixXd JLw1 = MatrixXd::Zero(6, 4);
 		JLw1.block<3, 1>(0, 1) = -w11*U1.col(2);
-		JLw1.block<3, 1>(0, 2) = w11*U1.col(1);
+		JLw1.block<3, 1>(0, 2) =  w11*U1.col(1);
 		JLw1.block<3, 1>(0, 3) = -w12*U1.col(0);
-		JLw1.block<3, 1>(3, 0) = w12*U1.col(2);
+		JLw1.block<3, 1>(3, 0) =  w12*U1.col(2);
 		JLw1.block<3, 1>(3, 2) = -w12*U1.col(0);
-		JLw1.block<3, 1>(3, 3) = w11*U1.col(1);
+		JLw1.block<3, 1>(3, 3) =  w11*U1.col(1);
 
 		MatrixXd JLw2 = MatrixXd::Zero(6, 4);
 		JLw2.block<3, 1>(0, 1) = -w21*U2.col(2);
-		JLw2.block<3, 1>(0, 2) = w21*U2.col(1);
+		JLw2.block<3, 1>(0, 2) =  w21*U2.col(1);
 		JLw2.block<3, 1>(0, 3) = -w22*U2.col(0);
-		JLw2.block<3, 1>(3, 0) = w22*U2.col(2);
+		JLw2.block<3, 1>(3, 0) =  w22*U2.col(2);
 		JLw2.block<3, 1>(3, 2) = -w22*U2.col(0);
-		JLw2.block<3, 1>(3, 3) = w21*U2.col(1);
+		JLw2.block<3, 1>(3, 3) =  w21*U2.col(1);
 
 		//Jacobian Lr/Lw
 		Vector6d Jr1 = Vector6d::Zero();
@@ -326,13 +330,17 @@ namespace  g2o {
 		Jr1[5] = Dw2(2) / K;
 
 		Vector6d Jr2 = Vector6d::Zero();
-		Jr2[0] = Nw1[0] / K + (-S(1) * Dw1(2) + S(2)*Dw1(1))*A / K3;
-		Jr2[1] = Nw1[1] / K + (-S(2) * Dw1(0) + S(0)*Dw1(2))*A / K3;
-		Jr2[2] = Nw1[2] / K + (-S(0) * Dw1(1) + S(1)*Dw1(0))*A / K3;
+		Jr2[0] = Nw1[0] / K + (S(1) * Dw1(2) - S(2)*Dw1(1))*A / K3;
+		Jr2[1] = Nw1[1] / K + (S(2) * Dw1(0) - S(0)*Dw1(2))*A / K3;
+		Jr2[2] = Nw1[2] / K + (S(0) * Dw1(1) - S(1)*Dw1(0))*A / K3;
 		Jr2[3] = Dw1(0) / K;
 		Jr2[4] = Dw1(1) / K;
 		Jr2[5] = Dw1(2) / K;
 
+		if (A < 0) {
+			Jr1 = -Jr1;
+			Jr2 = -Jr2;
+		}
 		//Jacobian Lr/Lo
 		_jacobianOplusXi = Jr1.transpose()*JLw1;
 		_jacobianOplusXj = Jr2.transpose()*JLw2;

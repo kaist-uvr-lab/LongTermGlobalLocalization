@@ -200,39 +200,107 @@ namespace ORB_SLAM2{
 		//cv::waitKey(0);
 	}
 
-	void LineOptimizer::LineJunctionOptimization() {
+	void LineOptimizer::LineJunctionOptimization(Map* pMap) {
 		//Junction
 		//Line
-
 		g2o::SparseOptimizer optimizer;
 		g2o::BlockSolver_4_4::LinearSolverType * linearSolver;
 		linearSolver = new g2o::LinearSolverDense<g2o::BlockSolver_4_4::PoseMatrixType>();
 		g2o::BlockSolver_4_4 * solver_ptr = new g2o::BlockSolver_4_4(linearSolver);
+		//solver_ptr->setSchur(false);
+		std::cout << "schur==" << solver_ptr->schur()<< std::endl;
 		g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(solver_ptr);
 		optimizer.setAlgorithm(solver);
 
-		//Add Line Vertex
+		//Add Line Vertex		
 		vector<g2o::LineVertex*> vpLineVertices;
-		vector<Line3d*> vpLines;
+		map<Line3d*, int> mpLines;
+		vector<Line3d*> vpLines = pMap->GetLine3ds();
+		int nLines = 1;
+		int nCPLines = 0;
+		vector<Line3d*> vTmpLines;
 
+		int idx = 0;
+		// Test with only one lines. 
 		for (int i = 0; i < vpLines.size(); i++) {
+			set<Line3d*> vL3d = vpLines[i]->GetCoplanarLine3d();
+			if (vL3d.size() == 3) {
+				idx = i;
+				
+				vTmpLines.push_back(vpLines[i]);
+				for (set<Line3d*>::iterator sit = vL3d.begin(), send = vL3d.end(); sit != send; sit++) {
+					vTmpLines.push_back(*sit);
+				}
+				nCPLines = vL3d.size() + 1;
+				break;
+			}
+		}
+
+		//int nID = 0;
+		for (int i = 0; i < nCPLines; i++) {
+		//for (int i = 0; i < vpLines.size(); i++) {
+			vTmpLines[i]->SetIsSelected(true);
+			if (i==0)
+				vTmpLines[i]->SetColor(2);
+			else
+				vTmpLines[i]->SetColor(1);
+
 			g2o::LineVertex* pLineVertex = new g2o::LineVertex();
 			//플리커 코디네잇에서 변환하는 과정
-			pLineVertex->setEstimate(g2o::LineConverter::ConvertParam(vpLines[i]->GetPluckerWorld()));
-			pLineVertex->setId(0);
+			pLineVertex->setEstimate(g2o::LineConverter::ConvertParam(vTmpLines[i]->GetPluckerWorld()));
+			pLineVertex->setId(i);
 			pLineVertex->setFixed(false);
-
+			//pLineVertex->setMarginalized(true);
 			optimizer.addVertex(pLineVertex);
 			vpLineVertices.push_back(pLineVertex);
+			mpLines.insert(make_pair(vTmpLines[i],i));
 		}
+
+		std::cout << "test::" << mpLines.size() << ", " << vpLineVertices.size() << std::endl;
+
 		//chi값의 설정 필요
 		const float deltaMono = sqrt(5.991);
 		//line edge
 		std::vector<g2o::EdgeLineOptimization*> vpEdgesLineOptimization;
+		vector<g2o::LineJunctionOptimizationEdge*> vpLineJunctionEdges;
 
-		for (int i = 0; i < vpLines.size(); i++) {
-			Line3d* pLine = vpLines[i];
+		for (int i = 0; i < 1; i++) {
+			Line3d* pLine = vpLines[idx];
 
+			//add junction edge
+			auto spCPs = pLine->GetCoplanarLine3d();
+
+			for (auto iter = spCPs.begin(); iter != spCPs.end(); iter++) {
+
+				Line3d* pLine2 = *iter;
+				if (find(vTmpLines.begin(), vTmpLines.end(), pLine2) == vTmpLines.end())
+					continue;
+
+				//pLine2->SetIsSelected(true);
+				//pLine2->SetColor(1);
+
+				auto findres = mpLines.find(pLine2);
+
+				if (findres != mpLines.end()) {
+
+					int idx2 = mpLines[pLine2];
+					g2o::LineJunctionOptimizationEdge* e = new g2o::LineJunctionOptimizationEdge();
+					e->setLevel(0);
+					e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[i]));
+					e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[idx2]));
+					e->setInformation(Eigen::Matrix<double, 1, 1>::Identity());
+					optimizer.addEdge(e);
+					vpLineJunctionEdges.push_back(e);
+					//std::cout << "success::" << i << ", " << idx2 << std::endl;
+				}
+				else {
+					if (pLine2) {
+						//std::cout << "error case ::" << pLine2->GetNumObservations() << std::endl;
+					}
+				}
+			}
+
+			//add line edge
 			auto mObservations = pLine->GetObservations();
 			for (auto iter = mObservations.begin(); iter != mObservations.end(); iter++) {
 
@@ -262,7 +330,7 @@ namespace ORB_SLAM2{
 
 				g2o::EdgeLineOptimization* e = new g2o::EdgeLineOptimization();
 				e->setLevel(0);
-				e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[i]));
+				e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(i)));
 
 				e->spt << spt.at<float>(0), spt.at<float>(1), spt.at<float>(2);
 				e->ept << ept.at<float>(0), ept.at<float>(1), ept.at<float>(2);
@@ -270,8 +338,10 @@ namespace ORB_SLAM2{
 				float dy = spt.at<float>(1) - ept.at<float>(1);
 				float length = sqrt(dx*dx + dy*dy);
 				float alpha = 100;
-				e->length = length;
-				e->alpha = alpha;
+				/*e->length = length;
+				e->alpha = alpha;*/
+				e->length = 1;
+				e->alpha = 1;
 
 				e->setInformation(Eigen::Matrix2d::Identity());
 				g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
@@ -302,7 +372,7 @@ namespace ORB_SLAM2{
 
 				//std::cout << e->T<<T << std::endl;
 
-				optimizer.addEdge(e);
+				//optimizer.addEdge(e);
 				vpEdgesLineOptimization.push_back(e);
 
 				//e->computeError();
@@ -314,27 +384,123 @@ namespace ORB_SLAM2{
 			}//for observations
 		}//for vplines
 
-		 //Line Junction Edges
-		vector<g2o::LineJunctionOptimizationEdge*> vpLineJunctionEdges;
-		vector<JunctionPair*> vpJunctions;
+		//for (int i = 0; i < vpLineVertices.size(); i++) {
+		//	Line3d* pLine = vpLines[idx];
 
-		for (int i = 0; i < vpJunctions.size(); i++) {
-			JunctionPair* junctionPair = vpJunctions[i];
-			auto tjunctionPair = junctionPair->GetJunctionPair();
-			Junction* junc1 = tjunctionPair.first;
-			Junction* junc2 = tjunctionPair.second;
+		//	//add junction edge
+		//	auto spCPs = pLine->GetCoplanarLine3d();
 
-			Line3d* line1;
-			Line3d* line2;
-			int lIdx1, lIdx2;
+		//	for (auto iter = spCPs.begin(); iter != spCPs.end(); iter++) {
 
-			g2o::LineJunctionOptimizationEdge* e = new g2o::LineJunctionOptimizationEdge();
-			e->setLevel(0);
-			e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[lIdx1]));
-			e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[lIdx2]));
-			optimizer.addEdge(e);
-			vpLineJunctionEdges.push_back(e);
-		}
+		//		Line3d* pLine2 = *iter;
+		//		if (find(vTmpLines.begin(), vTmpLines.end(), pLine2) == vTmpLines.end())
+		//			continue;
+
+		//		pLine2->SetIsSelected(true);
+		//		auto findres = mpLines.find(pLine2);
+		//		
+		//		if (findres != mpLines.end()) {
+		//			
+		//			int idx2 = mpLines[pLine2];
+		//			g2o::LineJunctionOptimizationEdge* e = new g2o::LineJunctionOptimizationEdge();
+		//			e->setLevel(0);
+		//			e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[i]));
+		//			e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(vpLineVertices[idx2]));
+		//			e->setInformation(Eigen::Matrix<double, 1, 1>::Identity());
+		//			optimizer.addEdge(e);
+		//			vpLineJunctionEdges.push_back(e);
+		//			//std::cout << "success::" << i << ", " << idx2 << std::endl;
+		//		}
+		//		else {
+		//			if (pLine2) {
+		//				//std::cout << "error case ::" << pLine2->GetNumObservations() << std::endl;
+		//			}
+		//		}
+		//	}
+
+		//	//add line edge
+		//	auto mObservations = pLine->GetObservations();
+		//	for (auto iter = mObservations.begin(); iter != mObservations.end(); iter++) {
+
+		//		KeyFrame* pKF = iter->first;
+		//		int idx = iter->second;
+
+		//		cv::Mat R = pKF->GetRotation();
+		//		cv::Mat t = pKF->GetTranslation();
+
+		//		cv::Mat SkewT = SKEW(t);
+		//		SkewT *= R;
+
+		//		cv::Mat K = pKF->mK.clone();
+		//		cv::Mat line2D = pKF->Get2DLine(idx);
+
+		//		cv::Mat spt = cv::Mat::ones(3, 1, CV_32FC1);
+		//		spt.at<float>(0) = line2D.at<float>(0);
+		//		spt.at<float>(1) = line2D.at<float>(1);
+		//		cv::Mat ept = cv::Mat::ones(3, 1, CV_32FC1);
+		//		ept.at<float>(0) = line2D.at<float>(2);
+		//		ept.at<float>(1) = line2D.at<float>(3);
+
+		//		cv::Mat T = cv::Mat::zeros(6, 6, CV_32FC1);
+		//		R.copyTo(T.colRange(0, 3).rowRange(0, 3));
+		//		R.copyTo(T.colRange(3, 6).rowRange(3, 6));
+		//		SkewT.copyTo(T.colRange(3, 6).rowRange(0, 3));
+
+		//		g2o::EdgeLineOptimization* e = new g2o::EdgeLineOptimization();
+		//		e->setLevel(0);
+		//		e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(i)));
+
+		//		e->spt << spt.at<float>(0), spt.at<float>(1), spt.at<float>(2);
+		//		e->ept << ept.at<float>(0), ept.at<float>(1), ept.at<float>(2);
+		//		float dx = spt.at<float>(0) - ept.at<float>(0);
+		//		float dy = spt.at<float>(1) - ept.at<float>(1);
+		//		float length = sqrt(dx*dx + dy*dy);
+		//		float alpha = 100;
+		//		/*e->length = length;
+		//		e->alpha = alpha;*/
+		//		e->length = 1;
+		//		e->alpha = 1;
+
+		//		e->setInformation(Eigen::Matrix2d::Identity());
+		//		g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
+		//		//rk->setDelta(deltaMono);
+		//		// Set adaptive threshold for huber cost function.
+		//		rk->setDelta(deltaMono * alpha / length);
+		//		e->setRobustKernel(rk);
+
+		//		//e->T = Eigen::Matrix<double, 6, 6>(T.data);
+
+		//		//float fx = pKF->fx;
+		//		//float fy = pKF->fy;
+		//		//float cx = pKF->cx;
+		//		//float cy = pKF->cy;
+		//		float fx = K.at<float>(0, 0);
+		//		float fy = K.at<float>(1, 1);
+		//		float cx = K.at<float>(0, 2);
+		//		float cy = K.at<float>(1, 2);
+		//		cv::Mat eK = cv::Mat::zeros(3, 3, CV_32FC1);
+		//		eK.at<float>(0, 0) = fy;
+		//		eK.at<float>(1, 1) = fx;
+		//		eK.at<float>(2, 0) = -fy*cx;
+		//		eK.at<float>(2, 1) = -fx*cy;
+		//		eK.at<float>(2, 2) = fx*fy;
+
+		//		cv::cv2eigen(T, e->T);
+		//		cv::cv2eigen(eK, e->K);
+
+		//		//std::cout << e->T<<T << std::endl;
+
+		//		//optimizer.addEdge(e);
+		//		vpEdgesLineOptimization.push_back(e);
+
+		//		//e->computeError();
+
+		//		//추가적으로 필요한 값 설정
+		//		//T : Lw를 Lc로 변경하기 위한 것
+		//		//K : Lc를 이미지에 프로젝션하기 위한 것
+		//		//end points 설정 3x1 2개이면 될 듯
+		//	}//for observations
+		//}//for vplines
 
 		const float chi2Mono[4] = { 5.991,5.991,5.991,5.991 };
 		const int its[4] = { 10,10,10,10 };
@@ -342,13 +508,68 @@ namespace ORB_SLAM2{
 		for (size_t it = 0; it < 4; it++)
 		{
 			//nBad = 0;
+			double err0_0 = 0.0;
+			double err0_1 = 0.0;
+			double err1 = 0.0;
+			double err2 = 0.0;
+
+			for (int i = 0; i < vpLineJunctionEdges.size(); i++) {
+				vpLineJunctionEdges[i]->computeError();
+				double chi2 = vpLineJunctionEdges[i]->chi2();
+				//std::cout << "edge::" << i << "::" << chi2 << std::endl;
+				err0_0 += chi2;
+			}
+
+			for (int i = 0; i < vpEdgesLineOptimization.size(); i++) {
+				vpEdgesLineOptimization[i]->computeError();
+				double chi2 = vpEdgesLineOptimization[i]->chi2();
+				//std::cout << "edge::" << i << "::" << chi2 << std::endl;
+				err0_1 += chi2;
+			}
+			//vpEdgesLineOptimization
+			std::cout << "init::" << it << "::total= " << err0_0 << " line = " << err0_1 << std::endl;
+
 			optimizer.initializeOptimization(0);
 			optimizer.optimize(its[it]);
+			//optimizer.setVerbose(true);
+			
+			for (int i = 0; i < vpLineJunctionEdges.size(); i++) {
+				//vpLineJunctionEdges[i]->computeError();
+				//double chi2 = vpLineJunctionEdges[i]->chi2();
+				Eigen::Vector3d rho;
+				double chi2 = 0;
+				g2o::LineJunctionOptimizationEdge* e = vpLineJunctionEdges[i];
+				e->computeError();
+				chi2 = e->chi2();
+				/*e->robustKernel()->robustify(e->chi2(), rho);
+				chi2 = rho[0];*/
+				
+				//std::cout << "edge::" << i << "::" << chi2 << std::endl;
+				err1 += chi2;
+			}
+			for (int i = 0; i < vpEdgesLineOptimization.size(); i++) {
+
+				//vpEdgesLineOptimization[i]->computeError();
+				//double chi2 = vpEdgesLineOptimization[i]->chi2();
+
+				Eigen::Vector3d rho;
+				double chi2 = 0;
+				g2o::EdgeLineOptimization* e = vpEdgesLineOptimization[i];
+				e->computeError();
+				e->robustKernel()->robustify(e->chi2(), rho);
+				chi2 = rho[0];
+
+				//std::cout << "edge::" << i << "::" << chi2 << std::endl;
+				err2 += chi2;
+			}
+			//vpEdgesLineOptimization
+			std::cout << "iter::" << it << "::total=" << err1<<", "<<err2 << std::endl;
 		}
 
 		//restore line data
 		for (int i = 0; i < vpLineVertices.size(); i++) {
 			Line3d* pLine = vpLines[i];
+			pLine->UpdateEndpts();
 			cv::Mat Lw;
 			g2o::LineVertex* vRecover = static_cast<g2o::LineVertex*>(optimizer.vertex(i));
 			cv::eigen2cv(g2o::LineConverter::ConvertPlukerCoordinates(vRecover->estimate()), Lw);
