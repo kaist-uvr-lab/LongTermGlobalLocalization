@@ -99,3 +99,6 @@ We provide some examples to process the live input of a monocular, stereo or RGB
 
 ## Boost
 Map save/load feature needs boost library and more specifically the`libboost_serialization` library.
+
+## Acknowledgment
+This work was supported by Institute of Information & communications Technology Planning & Evaluation (IITP) grant funded by the Korea government(MSIT) (No.2019-0-01270, WISE AR UI/UX Platform Development for Smartglasses)
